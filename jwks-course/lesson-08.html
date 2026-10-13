@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>第 8 課　指紋機｜JWKS 小學堂</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔏</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@900&family=Permanent+Marker&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <!-- 潦草線：大幅抖動＋炭筆顆粒，用在框線與色塊 -->
+  <filter id="scrawl" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="3" seed="5" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="6" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="9" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.4 0 0 0 2.2" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 油蠟筆：更粗的顆粒，紙紋會從色塊裡透出來 -->
+  <filter id="crayon" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="2" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="4" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="2" seed="12" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3.2 0 0 0 2.55" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 麥克筆字：只抖動、不加顆粒，標題用 -->
+  <filter id="marker" x="-4%" y="-10%" width="108%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+<header class="topbar">
+  <a class="badge" href="index.html" aria-label="回課程首頁">首頁</a>
+  <span class="by"><i>By</i> 小學堂</span>
+  <span class="micro" aria-hidden="true">A BEGINNER'S GUIDE TO SIGNED TOKENS, PUBLIC KEYS AND THE JWKS ENDPOINT. ONE STEP AT A TIME.</span>
+  <span class="where">第 8 課 <i>of</i> 16</span>
+</header>
+
+<main class="wrap" data-lesson="08">
+  <div class="progress"><div class="dots" aria-hidden="true"></div><span class="progress-text"></span></div>
+
+  <section class="step">
+    <h1 class="ransom">指紋機</h1>
+    <p class="lead">第 7 課的「對照機」用到了一種叫「指紋」的東西。這一課，我們好好認識它。</p>
+    <p>它是整個第三單元的地基，後面的印章都會用到它。</p>
+  </section>
+
+  <section class="step">
+    <h2>果汁機的四個特性</h2>
+    <p>想像一台很特別的果汁機。不管你丟什麼進去，它都會打出<strong>一杯固定大小</strong>的果汁：</p>
+    <p><strong>一、同樣的水果，永遠打出同樣的味道。</strong>今天打、明天打，結果一模一樣。</p>
+    <p><strong>二、差一點點，味道就完全不同。</strong>多放一顆葡萄，整杯味道都變了，不是「有一點點不一樣」。</p>
+    <p><strong>三、打不回去。</strong>給你一杯果汁，你沒辦法把它變回原本的水果。</p>
+    <p><strong>四、杯子大小固定。</strong>丟一顆葡萄或一整箱西瓜，都是同一杯的量。</p>
+    <div class="real">
+      <p class="label">真實世界</p>
+      <p>這種「指紋機」叫做<dfn class="term">雜湊函數<small>hash function</small></dfn>，最常見的一種叫 <dfn class="term">SHA-256</dfn>。不管輸入多長，它都會算出一串固定 64 個字的指紋。</p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>試試看：指紋機</h2>
+    <p>打任何字，下面會即時算出它的 SHA-256 指紋。這是真的在你的瀏覽器裡算的。</p>
+    <div class="sim">
+      <div class="io">
+        <label for="l8-in">丟進去的東西</label>
+        <textarea id="l8-in"></textarea>
+        <span class="lbl">指紋（永遠是 64 個字）</span>
+        <output class="out" id="l8-out" for="l8-in"></output>
+      </div>
+    </div>
+    <p>試著把同一句話打兩次，指紋會一模一樣；刪掉一個空白，指紋就整個變了。</p>
+  </section>
+
+  <section class="step">
+    <h2>找不同：只差一個標點</h2>
+    <p>這兩句話只差了最後的句號：</p>
+    <div class="sim">
+      <dl class="kv">
+        <dt id="l8-a"></dt><dd class="fp" id="l8-fa">計算中……</dd>
+        <dt id="l8-b"></dt><dd class="fp" id="l8-fb">計算中……</dd>
+      </dl>
+      <p class="feedback" id="l8-diff" aria-live="polite"></p>
+    </div>
+    <p>差一個標點，指紋卻幾乎每個字都不同。所以只要內容被偷改一點點，指紋馬上就對不上。</p>
+  </section>
+
+  <section class="step">
+    <h2>打不回去，只能猜</h2>
+    <p>總部把一個水果的名字丟進指紋機，只告訴你指紋：</p>
+    <p class="jwt" id="l8-riddle">計算中……</p>
+    <p>指紋沒辦法「倒推」回原文。你唯一能做的，是把猜的答案也丟進指紋機，看指紋對不對得上：</p>
+    <div class="quiz" id="l8-quiz">
+      <button class="btn" data-a="香蕉">香蕉</button>
+      <button class="btn" data-a="芭樂">芭樂</button>
+      <button class="btn" data-a="鳳梨">鳳梨</button>
+    </div>
+    <p class="feedback" id="l8-quiz-msg" aria-live="polite"></p>
+  </section>
+
+  <section class="step">
+    <h2>指紋的弱點</h2>
+    <p>指紋很適合用來檢查「內容有沒有被改過」。但還記得第 7 課的最後嗎？</p>
+    <p><strong>指紋機是公開的，誰都能用。</strong>壞人改完通行證的內容，自己丟進指紋機重算一個新指紋，分店就分不出來了。</p>
+    <p>所以光有指紋不夠。我們需要一種<strong>只有總部做得出來</strong>的東西。下一課，先試試最直覺的辦法。</p>
+  </section>
+
+  <section class="step">
+    <h2>這一課學到的</h2>
+    <p>指紋機（雜湊函數）會把任何內容變成固定長度的指紋：<strong>同樣內容同樣指紋、差一點就完全不同、而且打不回去</strong>。</p>
+    <p>它能抓到內容被偷改，但因為誰都能算，壞人也能重算一個新的。</p>
+
+    <div class="finish">
+      <span class="slot"></span>
+      <button class="btn primary" data-complete>我學會了，蓋章</button>
+    </div>
+    <div class="after-complete" hidden>
+      <p>蓋好了，這個章會留在首頁的集章卡上。</p>
+      <div class="actions">
+        <a class="btn primary" href="lesson-09.html">前往第 9 課</a>
+        <a class="btn" href="index.html">回課程首頁</a>
+      </div>
+    </div>
+  </section>
+
+  <nav class="stepnav" aria-label="步驟">
+    <button class="btn" data-prev>上一步</button>
+    <button class="btn primary" data-next>下一步</button>
+  </nav>
+</main>
+
+<script src="course.js"></script>
+<script>
+  (() => {
+
+    const enc = new TextEncoder();
+    const $ = (id) => document.getElementById(id);
+    const b64uBytes = (buf) => { let bin = ''; new Uint8Array(buf).forEach((b) => { bin += String.fromCharCode(b); }); return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+    const b64u = (str) => b64uBytes(enc.encode(str));
+    const unb64u = (s) => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); };
+    const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    const hasCrypto = !!(window.crypto && crypto.subtle);
+    const sha256 = async (s) => hex(await crypto.subtle.digest('SHA-256', enc.encode(s)));
+    const hmac = async (secret, msg) => {
+      const k = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+      return b64uBytes(await crypto.subtle.sign('HMAC', k, enc.encode(msg)));
+    };
+    const IAT = 1791856800, EXP = 1791857700;
+    const payload = (extra) => Object.assign({ iss: 'https://auth.example.com', sub: window.jwksName(), aud: 'ledger', role: 'member', iat: IAT, exp: EXP }, extra || {});
+    const makeKeys = async () => {
+      try {
+        const k = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+        return { publicKey: k.publicKey, privateKey: k.privateKey, alg: 'EdDSA', algo: { name: 'Ed25519' } };
+      } catch (e) {
+        const k = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+        return { publicKey: k.publicKey, privateKey: k.privateKey, alg: 'ES256', algo: { name: 'ECDSA', hash: 'SHA-256' } };
+      }
+    };
+    const signJWT = async (keys, kid, body) => {
+      const h = b64u(JSON.stringify({ alg: keys.alg, typ: 'JWT', kid }));
+      const p = b64u(JSON.stringify(body));
+      const sig = await crypto.subtle.sign(keys.algo, keys.privateKey, enc.encode(h + '.' + p));
+      return { h, p, s: b64uBytes(sig) };
+    };
+    const verifyJWT = async (keys, t) => {
+      try { return await crypto.subtle.verify(keys.algo, keys.publicKey, unb64u(t.s), enc.encode(t.h + '.' + t.p)); }
+      catch (e) { return false; }
+    };
+    const tokenHTML = (t, mark) => `<span class="seg h${mark === 'h' ? ' changed' : ''}">${t.h}</span><span class="pt">.</span><span class="seg p${mark === 'p' ? ' changed' : ''}">${t.p}</span><span class="pt">.</span><span class="seg s${mark === 's' ? ' changed' : ''}">${t.s}</span>`;
+    const pill = (ok, yes, no) => ok ? `<span class="pill ok">${yes}</span>` : `<span class="pill bad">${no}</span>`;
+    const short = (s, n = 18) => s.length > n ? s.slice(0, n) + '…' : s;
+    const onName = (fn) => document.addEventListener('jwks:name', fn);
+    const noCrypto = (el) => { el.innerHTML = '這台裝置的瀏覽器不支援密碼學功能，換一個新一點的瀏覽器就能試了。'; };
+
+    const inp = $('l8-in'), out = $('l8-out');
+    const run = async () => { if (!hasCrypto) return noCrypto(out); out.textContent = await sha256(inp.value); };
+    inp.addEventListener('input', run);
+    const seed = async () => {
+      inp.value = `我是 ${window.jwksName()}`; run();
+      const a = `我是 ${window.jwksName()}`, b = a + '。';
+      $('l8-a').textContent = `「${a}」`; $('l8-b').textContent = `「${b}」`;
+      if (!hasCrypto) return noCrypto($('l8-diff'));
+      const fa = await sha256(a), fb = await sha256(b);
+      $('l8-fa').textContent = fa; $('l8-fb').textContent = fb;
+      let same = 0; for (let i = 0; i < 64; i++) if (fa[i] === fb[i]) same++;
+      $('l8-diff').textContent = `64 個字裡，有 ${64 - same} 個不一樣。`;
+    };
+    seed(); onName(seed);
+    let answerFp = '';
+    if (hasCrypto) sha256('芭樂').then((v) => { answerFp = v; $('l8-riddle').textContent = v; }); else noCrypto($('l8-riddle'));
+    $('l8-quiz').addEventListener('click', async (e) => {
+      const b = e.target.closest('[data-a]'); if (!b || !answerFp) return;
+      const fp = await sha256(b.dataset.a);
+      $('l8-quiz').querySelectorAll('.btn').forEach((x) => x.classList.remove('right', 'wrong'));
+      const ok = fp === answerFp;
+      b.classList.add(ok ? 'right' : 'wrong');
+      $('l8-quiz-msg').textContent = ok ? `對了！「${b.dataset.a}」的指紋剛好對得上。你不是把指紋倒推回去，而是一個一個試出來的。` : `「${b.dataset.a}」的指紋開頭是 ${fp.slice(0, 10)}…，對不上，再試試。`;
+    });
+
+  })();
+</script>
+</body>
+</html>

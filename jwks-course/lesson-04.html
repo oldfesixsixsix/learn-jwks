@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>第 4 課　看起來像亂碼的通行證｜JWKS 小學堂</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔏</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@900&family=Permanent+Marker&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <!-- 潦草線：大幅抖動＋炭筆顆粒，用在框線與色塊 -->
+  <filter id="scrawl" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="3" seed="5" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="6" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="9" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.4 0 0 0 2.2" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 油蠟筆：更粗的顆粒，紙紋會從色塊裡透出來 -->
+  <filter id="crayon" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="2" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="4" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="2" seed="12" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3.2 0 0 0 2.55" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 麥克筆字：只抖動、不加顆粒，標題用 -->
+  <filter id="marker" x="-4%" y="-10%" width="108%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+<header class="topbar">
+  <a class="badge" href="index.html" aria-label="回課程首頁">首頁</a>
+  <span class="by"><i>By</i> 小學堂</span>
+  <span class="micro" aria-hidden="true">A BEGINNER'S GUIDE TO SIGNED TOKENS, PUBLIC KEYS AND THE JWKS ENDPOINT. ONE STEP AT A TIME.</span>
+  <span class="where">第 4 課 <i>of</i> 16</span>
+</header>
+
+<main class="wrap" data-lesson="04">
+  <div class="progress"><div class="dots" aria-hidden="true"></div><span class="progress-text"></span></div>
+
+  <section class="step">
+    <h1 class="ransom">看起來像亂碼的通行證</h1>
+    <p class="lead">第一單元一直在講「通行證」。這一課，我們終於要看一張真的。</p>
+    <p>先打個預防針：它長得<strong>非常嚇人</strong>。但看完這一課，你會發現它其實很好懂。</p>
+    <p class="note">大約 5 分鐘，不需要任何程式基礎。</p>
+  </section>
+
+  <section class="step">
+    <h2>這就是一張真的通行證</h2>
+    <p>下面這一長串，就是總部發給 <span data-name>小明</span> 的通行證，也就是你的。每次你在分店做事，瀏覽器都會偷偷把它附上去。</p>
+    <p class="jwt " id="l4-jwt1" aria-label="一張 JWT 通行證，由兩個點分成三段"><span class="seg h">eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCIsImtpZCI6ImFiYzEyMyJ9</span><span class="pt">.</span><span class="seg p">eyJpc3MiOiJodHRwczovL2F1dGguZXhhbXBsZS5jb20iLCJzdWIiOiLlsI_mmI4iLCJhdWQiOiJsZWRnZXIiLCJyb2xlIjoibWVtYmVyIiwiaWF0IjoxNzkxODU2ODAwLCJleHAiOjE3OTE4NTc3MDB9</span><span class="pt">.</span><span class="seg s">AtYMpoawQJ0ax16ASnQ5UX5tGRS00klMRHex1-efRUzvDE2eSXX3uZnAnbFnr7xP6UsvLOi6XytkxASBbWPTyw</span></p>
+    <p>看起來像貓咪踩過鍵盤，對吧？沒關係，先別試著讀懂它，下一步我們找一個小線索。</p>
+    <div class="real">
+      <p class="label">真實世界</p>
+      <p>這種格式叫做 <dfn class="term">JWT<small>JSON Web Token</small></dfn>，很多人唸成「jot」。幾乎所有用通行證做法的網站，用的都是它。</p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>線索：裡面藏了兩個點</h2>
+    <p>仔細看，這一長串裡面有兩個小小的「.」。很難找，我們請機器幫忙。</p>
+    <p class="jwt " id="l4-jwt2" aria-label="一張 JWT 通行證，由兩個點分成三段"><span class="seg h">eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCIsImtpZCI6ImFiYzEyMyJ9</span><span class="pt">.</span><span class="seg p">eyJpc3MiOiJodHRwczovL2F1dGguZXhhbXBsZS5jb20iLCJzdWIiOiLlsI_mmI4iLCJhdWQiOiJsZWRnZXIiLCJyb2xlIjoibWVtYmVyIiwiaWF0IjoxNzkxODU2ODAwLCJleHAiOjE3OTE4NTc3MDB9</span><span class="pt">.</span><span class="seg s">AtYMpoawQJ0ax16ASnQ5UX5tGRS00klMRHex1-efRUzvDE2eSXX3uZnAnbFnr7xP6UsvLOi6XytkxASBbWPTyw</span></p>
+    <div class="actions"><button class="btn" id="l4-dots">把點標出來</button></div>
+    <p class="feedback" id="l4-dots-msg" aria-live="polite"></p>
+  </section>
+
+  <section class="step">
+    <h2>兩個點，切成三段</h2>
+    <p>兩個點把通行證切成三段，每一段負責不同的事。就像一張紙本通行證，有<strong>抬頭、內容、印章</strong>三個區塊。</p>
+    <p class="jwt colored" id="l4-jwt3" aria-label="一張 JWT 通行證，由兩個點分成三段"><span class="seg h">eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCIsImtpZCI6ImFiYzEyMyJ9</span><span class="pt">.</span><span class="seg p">eyJpc3MiOiJodHRwczovL2F1dGguZXhhbXBsZS5jb20iLCJzdWIiOiLlsI_mmI4iLCJhdWQiOiJsZWRnZXIiLCJyb2xlIjoibWVtYmVyIiwiaWF0IjoxNzkxODU2ODAwLCJleHAiOjE3OTE4NTc3MDB9</span><span class="pt">.</span><span class="seg s">AtYMpoawQJ0ax16ASnQ5UX5tGRS00klMRHex1-efRUzvDE2eSXX3uZnAnbFnr7xP6UsvLOi6XytkxASBbWPTyw</span></p>
+    <div class="legend">
+      <div><span class="sw h"></span><p><strong>第一段：抬頭</strong>。說明這張通行證用什麼方式蓋章、蓋的是哪一顆章。</p></div>
+      <div><span class="sw p"></span><p><strong>第二段：內容</strong>。你是誰、什麼時候到期，這些資料都在這裡。</p></div>
+      <div><span class="sw s"></span><p><strong>第三段：印章</strong>。用來證明這張通行證是總部發的、沒被改過。</p></div>
+    </div>
+    <div class="real">
+      <p class="label">真實世界</p>
+      <p>三段的正式名稱分別是 <dfn class="term">header<small>標頭</small></dfn>、<dfn class="term">payload<small>內容</small></dfn>、<dfn class="term">signature<small>簽章</small></dfn>。</p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>為什麼要長得這麼亂？</h2>
+    <p>寄包裹時，郵局只收標準尺寸的紙箱。你的東西形狀再奇怪，都要先裝進標準紙箱才能寄。</p>
+    <p>通行證也一樣。它要放在網址、或網路請求的「標頭」裡面一起傳送，那些地方只接受一些安全的英文字母和數字。所以總部會先把內容<strong>轉換</strong>成這些安全字元，才發給你。</p>
+    <p>這就是它看起來像亂碼的原因：<strong>不是故意藏起來，只是換了一種包裝。</strong></p>
+    <p>這種轉換方式叫做 base64，下一課會親手試試看。</p>
+  </section>
+
+  <section class="step">
+    <h2>小測驗</h2>
+    <p>如果你想知道這張通行證是發給誰的，應該看哪一段？</p>
+    <div class="quiz" id="l4-quiz">
+      <button class="btn" data-a="1">第一段：抬頭</button>
+      <button class="btn" data-a="2">第二段：內容</button>
+      <button class="btn" data-a="3">第三段：印章</button>
+    </div>
+    <p class="feedback" id="l4-quiz-msg" aria-live="polite"></p>
+  </section>
+
+  <section class="step">
+    <h2>這一課學到的</h2>
+    <p>真正的通行證叫 <dfn class="term">JWT</dfn>，看起來是一長串亂碼，其實被兩個點切成<strong>三段：抬頭、內容、印章</strong>。</p>
+    <p>它看起來亂，是因為內容被轉換成安全字元方便傳送，不是因為被藏起來。</p>
+    <p>下一課，我們要親手把它「轉回來」。</p>
+
+    <div class="finish">
+      <span class="slot"></span>
+      <button class="btn primary" data-complete>我學會了，蓋章</button>
+    </div>
+    <div class="after-complete" hidden>
+      <p>蓋好了，這個章會留在首頁的集章卡上。</p>
+      <div class="actions">
+        <a class="btn primary" href="lesson-05.html">前往第 5 課</a>
+        <a class="btn" href="index.html">回課程首頁</a>
+      </div>
+    </div>
+  </section>
+
+  <nav class="stepnav" aria-label="步驟">
+    <button class="btn" data-prev>上一步</button>
+    <button class="btn primary" data-next>下一步</button>
+  </nav>
+</main>
+
+<script src="course.js"></script>
+<script>
+  (() => {
+    const b64u = (str) => { const bytes = new TextEncoder().encode(str); let bin = ''; bytes.forEach((b) => { bin += String.fromCharCode(b); }); return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+    const unb64u = (s) => { s = s.trim().replace(/-/g, '+').replace(/_/g, '/'); if (/[^A-Za-z0-9+/]/.test(s)) throw new Error('bad'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); };
+    const asText = (bytes) => new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const IAT = 1791856800, EXP = 1791857700;
+    // 通行證內容：sub 用學習者自己的名字
+    const payload = (extra) => Object.assign({ iss: 'https://auth.example.com', sub: window.jwksName(), aud: 'ledger', role: 'member', iat: IAT, exp: EXP }, extra || {});
+    const P = () => b64u(JSON.stringify(payload()));
+    const onName = (fn) => document.addEventListener('jwks:name', fn);
+    const fillP = () => document.querySelectorAll('#l4-jwt1 .p, #l4-jwt2 .p, #l4-jwt3 .p').forEach((el) => { el.textContent = P(); });
+    fillP(); onName(fillP);
+    const btn = document.getElementById('l4-dots');
+    btn.addEventListener('click', () => {
+      const j = document.getElementById('l4-jwt2');
+      const on = j.classList.toggle('show-dots');
+      btn.textContent = on ? '收起來' : '把點標出來';
+      document.getElementById('l4-dots-msg').textContent = on ? '找到了！整串裡只有這兩個點。' : '';
+    });
+    const quiz = document.getElementById('l4-quiz');
+    const msg = document.getElementById('l4-quiz-msg');
+    const replies = {
+      1: '抬頭只寫了「用什麼方式蓋章」，沒有你的資料。再想想看？',
+      2: '答對了！你是誰、什麼時候到期，都寫在第二段的內容裡。',
+      3: '印章是用來證明真假的，它本身看不出你是誰。再想想看？'
+    };
+    quiz.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-a]');
+      if (!b) return;
+      quiz.querySelectorAll('.btn').forEach((x) => x.classList.remove('right', 'wrong'));
+      b.classList.add(b.dataset.a === '2' ? 'right' : 'wrong');
+      msg.textContent = replies[b.dataset.a];
+    });
+  })();
+</script>
+</body>
+</html>

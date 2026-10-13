@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>JWKS 小學堂</title>
+<meta name="description" content="網站怎麼證明你就是你？用印章和通行證的故事，從零開始搞懂 JWT 與 JWKS。">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔏</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@900&family=Permanent+Marker&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <!-- 潦草線：大幅抖動＋炭筆顆粒，用在框線與色塊 -->
+  <filter id="scrawl" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="3" seed="5" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="6" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="9" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.4 0 0 0 2.2" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 油蠟筆：更粗的顆粒，紙紋會從色塊裡透出來 -->
+  <filter id="crayon" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="2" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="4" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="2" seed="12" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3.2 0 0 0 2.55" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 麥克筆字：只抖動、不加顆粒，標題用 -->
+  <filter id="marker" x="-4%" y="-10%" width="108%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+<header class="topbar">
+  <span class="badge">JWKS</span>
+  <span class="by"><i>By</i> 小學堂</span>
+  <span class="micro" aria-hidden="true">A BEGINNER'S GUIDE TO SIGNED TOKENS, PUBLIC KEYS AND THE JWKS ENDPOINT. ONE STEP AT A TIME.</span>
+  <span class="where">16 課 <i>in</i> 4 單元</span>
+</header>
+<main class="wrap">
+  <div class="raw-hero">
+    <svg class="scene" viewBox="0 0 600 390" role="img" aria-label="塗鴉插畫：一棟長著眼睛和尖牙的總部，頭上紅色尖刺，箭頭指向三間小分店；左上角寫著被劃掉的「密碼」，一張寫著 PASS 的通行證飛在空中">
+      <defs>
+        <pattern id="g-y" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><line x1="0" y1="0" x2="0" y2="9" style="stroke:var(--yellow)" stroke-width="5.5"/></pattern>
+        <pattern id="g-y2" width="13" height="13" patternUnits="userSpaceOnUse" patternTransform="rotate(-55)"><line x1="0" y1="0" x2="0" y2="13" style="stroke:var(--yellow)" stroke-width="3"/></pattern>
+        <pattern id="g-r" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)"><rect width="7" height="7" style="fill:var(--red)" opacity=".3"/><line x1="0" y1="0" x2="0" y2="7" style="stroke:var(--red)" stroke-width="4.5"/></pattern>
+        <pattern id="g-p" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(40)"><line x1="0" y1="0" x2="0" y2="7" style="stroke:var(--pink)" stroke-width="4.5"/></pattern>
+        <pattern id="g-g" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)"><line x1="0" y1="0" x2="0" y2="8" style="stroke:var(--green)" stroke-width="4"/></pattern>
+        <pattern id="g-k" width="8" height="8" patternUnits="userSpaceOnUse"><path d="M0 0l8 8M8 0L0 8" style="stroke:var(--ink)" stroke-width="1.4"/></pattern>
+      </defs>
+
+      <g filter="url(#crayon)">
+        <!-- 撞色大色塊 -->
+        <path d="M0 110L160 92l26 298H0z" fill="url(#g-r)"/>
+        <path d="M470 20l120-8 6 74-112 10z" fill="url(#g-p)"/>
+        <path d="M388 312l212-34v112H372z" fill="url(#g-y)"/>
+        <path d="M388 312l212-34v112H372z" fill="url(#g-y2)"/>
+      </g>
+
+      <g filter="url(#scrawl)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <!-- 左上：井字＋紅色六角，像隨手亂畫的記號 -->
+        <path d="M22 22l70 46M88 18L26 80M56 10v80M12 52h84" style="stroke:var(--ink)" stroke-width="4"/>
+        <path d="M36 30l26-10 24 16-4 28-26 10-22-16z" style="stroke:var(--red)" stroke-width="3.5"/>
+
+        <!-- 總部：有眼睛和尖牙的怪物房子 -->
+        <path d="M214 132l126-8 8 188-142 6z" fill="url(#g-y)" stroke="none"/>
+        <path d="M212 262l136-4 2 54-142 6z" fill="url(#g-k)" stroke="none"/>
+        <path d="M214 132l126-8 8 188-142 6z" style="stroke:var(--ink)" stroke-width="5"/>
+        <path d="M218 136l118-6 10 180" style="stroke:var(--ink)" stroke-width="2"/>
+        <path d="M212 130l14-56 20 50 16-62 20 58 18-54 14 52 18-44 8 44" style="stroke:var(--red)" stroke-width="5.5"/>
+        <circle cx="250" cy="180" r="18" style="fill:var(--paper-light);stroke:var(--ink)" stroke-width="4"/>
+        <circle cx="304" cy="176" r="18" style="fill:var(--paper-light);stroke:var(--ink)" stroke-width="4"/>
+        <circle cx="254" cy="183" r="6" style="fill:var(--ink)" stroke="none"/>
+        <path d="M296 168l16 16M312 168l-16 16" style="stroke:var(--red)" stroke-width="4"/>
+        <path d="M234 228l14 18 14-18 14 18 14-18 14 18 14-18" style="stroke:var(--ink)" stroke-width="4.5"/>
+        <path d="M264 316l2-40h30l2 38" style="stroke:var(--ink)" stroke-width="4"/>
+
+        <!-- 分店 -->
+        <path d="M38 236l66-4 4 64-74 4z" fill="url(#g-k)" style="stroke:var(--ink)" stroke-width="4"/>
+        <path d="M418 206l68 4-4 58-66-4z" fill="url(#g-p)" style="stroke:var(--ink)" stroke-width="4"/>
+        <path d="M506 126l62-2 4 54-68 4z" fill="url(#g-g)" style="stroke:var(--ink)" stroke-width="4"/>
+
+        <!-- 箭頭：總部到各分店 -->
+        <path d="M206 262q-50-14-92 0M122 250l-10 12 14 6" style="stroke:var(--ink)" stroke-width="3.5"/>
+        <path d="M350 238q40-10 62-4M402 224l12 10-12 8" style="stroke:var(--ink)" stroke-width="3.5"/>
+        <path d="M344 156q80-40 154-12M488 132l12 12-14 6" style="stroke:var(--ink)" stroke-width="3.5"/>
+
+        <!-- 飛在空中的通行證 -->
+        <g transform="translate(398 38) rotate(9)">
+          <path d="M0 2l86-2 2 54-88 2z" style="fill:var(--paper-light);stroke:var(--ink)" stroke-width="4"/>
+          <path d="M60 30l8 10 16-22" style="stroke:var(--red)" stroke-width="4.5"/>
+        </g>
+        <path d="M380 70q-14 2-26 10M384 86q-14 4-22 12" style="stroke:var(--ink)" stroke-width="2.5"/>
+
+        <!-- 被劃掉的「密碼」 -->
+        <path d="M112 66l88-10M116 52l80 22" style="stroke:var(--red)" stroke-width="4.5"/>
+
+        <!-- 計數線 -->
+        <path d="M470 330v36M484 328v36M498 330v36M512 328v36M462 360l60-28" style="stroke:var(--ink)" stroke-width="3.5"/>
+      </g>
+
+      <!-- 手寫字（不套濾鏡，保持看得懂） -->
+      <g style="font-family:var(--hand);fill:var(--ink)" font-weight="700">
+        <text x="120" y="70" font-size="30">密碼</text>
+        <text x="280" y="356" font-size="28" text-anchor="middle">總部!!</text>
+        <text x="72" y="326" font-size="18" text-anchor="middle">記帳</text>
+        <text x="452" y="292" font-size="18" text-anchor="middle">相簿</text>
+        <text x="538" y="206" font-size="18" text-anchor="middle">行事曆</text>
+      </g>
+      <text x="406" y="66" transform="rotate(9 406 66)" font-size="18" style="font-family:var(--scrawl);fill:var(--red)">PASS</text>
+      <text x="236" y="40" font-size="15" transform="rotate(-6 236 40)" style="font-family:var(--scrawl);fill:var(--ink)" opacity=".8">ONE LOGIN!!</text>
+    </svg>
+  </div>
+
+  <header class="hero">
+    <span class="seal seal-logo" role="img" aria-label="小學堂印"><span>小</span><span>學</span><span>堂</span><span>印</span></span>
+    <div>
+      <h1 class="ransom">JWKS 小學堂</h1>
+      <p class="lead">網站怎麼確認「你就是你」？用總部、分店、印章和通行證的故事，一步一步搞懂。不需要任何程式基礎。</p>
+      <div class="name-row">
+        <label for="learner-name">先報上你的名字</label>
+        <input type="text" id="learner-name" maxlength="12" placeholder="小明" autocomplete="nickname">
+        <p class="note">課程裡的櫃檯和通行證，都會寫上這個名字。只存在這台裝置。</p>
+      </div>
+      <a class="btn primary" href="lesson-01.html" data-start>開始上課</a>
+    </div>
+  </header>
+
+  <section data-stampcard aria-labelledby="card-title">
+    <div class="card-head">
+      <h2 id="card-title"><span data-name>小明</span> 的集章卡</h2>
+      <p>已集 <span data-count>0</span> / 16 個章</p>
+    </div>
+    <p class="card-tip">每學會一課就蓋一個章。偶爾會蓋出別的章，集滿看看你會遇到幾種。</p>
+
+    <div class="unit">
+      <h2>單元一　為什麼需要通行證</h2>
+      <ol class="lessons">
+        <li data-id="01">
+          <span class="num">1</span>
+          <div><a class="title" href="lesson-01.html">網站怎麼知道你是你</a><span class="desc">登入一次，網站就一直記得你？其實它很健忘。</span></div>
+          <span class="slot"></span>
+        </li>
+        <li data-id="02">
+          <span class="num">2</span>
+          <div><a class="title" href="lesson-02.html">兩種記住你的方法</a><span class="desc">寄物櫃號碼牌，和寫滿資料的隨身通行證。</span></div>
+          <span class="slot"></span>
+        </li>
+        <li data-id="03">
+          <span class="num">3</span>
+          <div><a class="title" href="lesson-03.html">一間總部、很多分店</a><span class="desc">服務一多，每次都打電話回總部問就撐不住了。</span></div>
+          <span class="slot"></span>
+        </li>
+      </ol>
+    </div>
+
+    <div class="unit">
+      <h2>單元二　通行證上寫了什麼</h2>
+      <ol class="lessons" start="4">
+        <li data-id="04">
+          <span class="num">4</span>
+          <div><a class="title" href="lesson-04.html">看起來像亂碼的通行證</a><span class="desc">一長串英文字母，其實只有三段。</span></div>
+          <span class="slot"></span>
+        </li>
+        <li data-id="05">
+          <span class="num">5</span>
+          <div><a class="title" href="lesson-05.html">base64 不是加密</a><span class="desc">看不懂，不代表別人解不開。</span></div>
+          <span class="slot"></span>
+        </li>
+        <li data-id="06">
+          <span class="num">6</span>
+          <div><a class="title" href="lesson-06.html">拆開通行證</a><span class="desc">姓名、到期時間，都寫在哪裡。</span></div>
+          <span class="slot"></span>
+        </li>
+        <li data-id="07">
+          <span class="num">7</span>
+          <div><a class="title" href="lesson-07.html">那第三段呢？</a><span class="desc">如果誰都讀得懂，那誰都能改嗎？</span></div>
+          <span class="slot"></span>
+        </li>
+      </ol>
+    </div>
+
+    <div class="unit">
+      <h2>單元三　印章與印鑑證明</h2>
+      <ol class="lessons" start="8">
+        <li data-id="08">
+          <span class="num">8</span>
+          <div><a class="title" href="lesson-08.html">指紋機</a><span class="desc">改一個字，指紋就完全不一樣。</span></div>
+          <span class="slot"></span>
+        </li>
+        <li data-id="09">
+          <span class="num">9</span>
+          <div><a class="title" href="lesson-09.html">共用一顆印章的問題</a><span class="desc">一間分店弄丟，全部都完蛋。</span></div>
+          <span class="slot"></span>
+        </li>
+        <li data-id="10">
+          <span class="num">10</span>
+          <div><a class="title" href="lesson-10.html">印章和印鑑證明</a><span class="desc">一個只能蓋，一個只能比對。</span></div>
+          <span class="slot"></span>
+        </li>
+        <li data-id="11">
+          <span class="num">11</span>
+          <div><a class="title" href="lesson-11.html">親手蓋一次章</a><span class="desc">在瀏覽器裡真的做一對鑰匙、簽一張通行證。</span></div>
+          <span class="slot"></span>
+        </li>
+        <li data-id="12">
+          <span class="num">12</span>
+          <div><a class="title" href="lesson-12.html">偷改通行證</a><span class="desc">改掉名字，看驗證當場失敗。</span></div>
+          <span class="slot"></span>
+        </li>
+      </ol>
+    </div>
+
+    <div class="unit">
+      <h2>單元四　真實世界的運作</h2>
+      <ol class="lessons" start="13">
+        <li data-id="13">
+          <span class="num">13</span>
+          <div><a class="title" href="lesson-13.html">公告欄</a><span class="desc">分店去哪裡拿印鑑證明，抄一次能用多久。</span></div>
+          <span class="slot"></span>
+        </li>
+        <li data-id="14">
+          <span class="num">14</span>
+          <div><a class="title" href="lesson-14.html">印章編號與換印章</a><span class="desc">換新印章時，舊通行證怎麼辦。</span></div>
+          <span class="slot"></span>
+        </li>
+        <li data-id="15">
+          <span class="num">15</span>
+          <div><a class="title" href="lesson-15.html">收不回來的通行證</a><span class="desc">人已經停權了，通行證還沒過期。</span></div>
+          <span class="slot"></span>
+        </li>
+        <li data-id="16">
+          <span class="num">16</span>
+          <div><a class="title" href="lesson-16.html">騙子的三個招數</a><span class="desc">試著騙過一間笨分店，再看聰明分店怎麼擋。</span></div>
+          <span class="slot"></span>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <p class="footer">學習進度只存在這台裝置的瀏覽器裡。</p>
+</main>
+<script src="course.js"></script>
+</body>
+</html>

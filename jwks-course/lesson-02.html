@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>第 2 課　兩種記住你的方法｜JWKS 小學堂</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔏</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@900&family=Permanent+Marker&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <!-- 潦草線：大幅抖動＋炭筆顆粒，用在框線與色塊 -->
+  <filter id="scrawl" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="3" seed="5" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="6" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="9" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.4 0 0 0 2.2" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 油蠟筆：更粗的顆粒，紙紋會從色塊裡透出來 -->
+  <filter id="crayon" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="2" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="4" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="2" seed="12" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3.2 0 0 0 2.55" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 麥克筆字：只抖動、不加顆粒，標題用 -->
+  <filter id="marker" x="-4%" y="-10%" width="108%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+<header class="topbar">
+  <a class="badge" href="index.html" aria-label="回課程首頁">首頁</a>
+  <span class="by"><i>By</i> 小學堂</span>
+  <span class="micro" aria-hidden="true">A BEGINNER'S GUIDE TO SIGNED TOKENS, PUBLIC KEYS AND THE JWKS ENDPOINT. ONE STEP AT A TIME.</span>
+  <span class="where">第 2 課 <i>of</i> 16</span>
+</header>
+
+<main class="wrap" data-lesson="02">
+  <div class="progress"><div class="dots" aria-hidden="true"></div><span class="progress-text"></span></div>
+
+  <section class="step">
+    <h1 class="ransom">兩種記住你的方法</h1>
+    <p class="lead">上一課說到，登入之後網站會給你一個「證明」，之後每次都出示它。</p>
+    <p>這個證明有兩種常見的做法。好消息是，兩種你在生活中都用過。</p>
+  </section>
+
+  <section class="step">
+    <h2>做法一：寄物櫃號碼牌</h2>
+    <p>去博物館寄放包包，櫃檯給你一張號碼牌。</p>
+    <p><span class="ticket" role="img" aria-label="號碼牌 A27">A27</span></p>
+    <p>號碼牌上<strong>只有一個號碼</strong>，沒有其他資訊。你的包包放在櫃檯後面。要取回的時候，櫃檯拿著號碼，走到後面去找。</p>
+    <div class="real">
+      <p class="label">真實世界</p>
+      <p>這種做法叫做<dfn class="term">session<small>工作階段</small></dfn>。你登入後，伺服器在自己的資料庫記下「A27 是 <span data-name>小明</span>」，只把號碼交給你的瀏覽器保管。之後你出示 A27，伺服器就去查表。</p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>做法二：隨身通行證</h2>
+    <p>參加研討會時，你拿到的名牌上直接印好了：</p>
+    <div class="pass" role="img" aria-label="一張寫著你名字的通行證：身分一般會員，有效到今天 18:00">
+      <div class="pass-title">通行證</div>
+      <dl><dt>姓名</dt><dd><span data-name>小明</span></dd><dt>身分</dt><dd>一般會員</dd><dt>有效到</dt><dd>今天 18:00</dd></dl>
+    </div>
+    <p style="margin-top:1rem">工作人員看一眼名牌，就知道你是誰、能不能進，<strong>不用回報到處查名單</strong>。</p>
+    <div class="real">
+      <p class="label">真實世界</p>
+      <p>這種做法叫做<dfn class="term">token<small>權杖、令牌</small></dfn>。資料直接寫在你帶著的東西上，伺服器看了就知道，不用查表。</p>
+      <p>最常見的 token 格式叫 <dfn class="term">JWT</dfn>，第二單元會把它整個拆開來看。</p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>比一比：櫃檯要忙多久</h2>
+    <p>分別按下兩邊的按鈕，看櫃檯要做幾件事。</p>
+    <div class="duo">
+      <div class="sim">
+        <div class="sim-title">號碼牌</div>
+        <span class="ticket" aria-hidden="true">A27</span>
+        <div class="actions"><button class="btn btn-sm" id="run-ticket">出示號碼牌</button></div>
+        <ol class="trace" id="trace-ticket" aria-live="polite"></ol>
+        <p class="elapsed" id="time-ticket"></p>
+      </div>
+      <div class="sim">
+        <div class="sim-title">通行證</div>
+        <div class="pass" aria-hidden="true">
+          <div class="pass-title">通行證</div>
+          <dl><dt>姓名</dt><dd><span data-name>小明</span></dd><dt>身分</dt><dd>一般會員</dd></dl>
+        </div>
+        <div class="actions"><button class="btn btn-sm" id="run-pass">出示通行證</button></div>
+        <ol class="trace" id="trace-pass" aria-live="polite"></ol>
+        <p class="elapsed" id="time-pass"></p>
+      </div>
+    </div>
+    <p class="note">這裡的秒數是故意放慢的。真實世界的差距只有幾毫秒，但一天幾百萬次請求，累積起來就很可觀。</p>
+  </section>
+
+  <section class="step">
+    <h2>等等，通行證不能自己改嗎？</h2>
+    <p>通行證看起來又快又方便。但資料既然寫在你手上……你自己改一下會怎樣？</p>
+    <p>試著把「身分」改掉，再拿去給櫃檯看。</p>
+    <div class="sim">
+      <div class="pass">
+        <div class="pass-title">通行證</div>
+        <dl>
+          <dt>姓名</dt><dd><span data-name>小明</span></dd>
+          <dt><label for="role">身分</label></dt>
+          <dd>
+            <select id="role">
+              <option>一般會員</option>
+              <option>VIP 貴賓</option>
+              <option>系統管理員</option>
+            </select>
+          </dd>
+          <dt>有效到</dt><dd>今天 18:00</dd>
+        </dl>
+      </div>
+      <div class="actions"><button class="btn btn-sm" id="show-forged">拿去給櫃檯看</button></div>
+      <div class="log" id="forge-log" aria-live="polite" style="min-height:4rem"></div>
+    </div>
+    <p>這顯然不行。如果通行證上的字誰都能改，那它根本沒有用。</p>
+    <p>號碼牌就沒有這個問題，因為真正的資料在櫃檯後面，你改不到。<strong>通行證要怎麼防止被亂改？</strong>答案在第三單元：給它蓋上一個改不了的章。</p>
+  </section>
+
+  <section class="step">
+    <h2>兩種做法，各有好壞</h2>
+    <div class="table-scroll">
+      <table class="compare">
+        <thead><tr><th scope="col"></th><th scope="col">號碼牌（session）</th><th scope="col">通行證（token）</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">資料放在哪</th><td>櫃檯後面</td><td>寫在你帶著的東西上</td></tr>
+          <tr><th scope="row">每次都要查表嗎</th><td>要</td><td>不用，看了就知道</td></tr>
+          <tr><th scope="row">想讓某人立刻失效</th><td>簡單，把那筆紀錄刪掉</td><td>比較麻煩，第 15 課會談</td></tr>
+          <tr><th scope="row">最怕什麼</th><td>號碼被偷</td><td>被偷，或內容被亂改</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>兩種都是正當的做法，很多網站甚至兩種一起用。</p>
+    <p>這套課要學的 <dfn class="term">JWKS</dfn>，是一套讓「通行證」做法變得<strong>安全又好用</strong>的方法。</p>
+  </section>
+
+  <section class="step">
+    <h2>這一課學到的</h2>
+    <p>證明有兩種做法：<strong>號碼牌</strong>（session）只給你一個號碼，資料留在伺服器；<strong>通行證</strong>（token）把資料直接寫在你身上，伺服器不用查表。</p>
+    <p>通行證比較快，但有個大問題：內容如果能被亂改，就一點用都沒有。</p>
+    <p>下一課會看到，當服務越變越多，通行證的好處會變得更明顯。</p>
+
+    <div class="finish">
+      <span class="slot"></span>
+      <button class="btn primary" data-complete>我學會了，蓋章</button>
+    </div>
+    <div class="after-complete" hidden>
+      <p>蓋好了，這個章會留在首頁的集章卡上。</p>
+      <div class="actions">
+        <a class="btn primary" href="lesson-03.html">前往第 3 課</a>
+        <a class="btn" href="index.html">回課程首頁</a>
+      </div>
+    </div>
+  </section>
+
+  <nav class="stepnav" aria-label="步驟">
+    <button class="btn" data-prev>上一步</button>
+    <button class="btn primary" data-next>下一步</button>
+  </nav>
+</main>
+
+<script src="course.js"></script>
+<script>
+  // 比一比：逐步顯示櫃檯做的事
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function runTrace(btn, list, timeEl, steps, extra) {
+    btn.addEventListener('click', () => {
+      btn.disabled = true;
+      list.innerHTML = '';
+      timeEl.textContent = '';
+      let total = 0;
+      steps.forEach(([ms, text], i) => {
+        total += ms;
+        setTimeout(() => {
+          const li = document.createElement('li');
+          li.textContent = text.replace('{N}', window.jwksName());
+          if (i === steps.length - 1) li.className = 'last';
+          list.appendChild(li);
+          if (i === steps.length - 1) {
+            timeEl.textContent = '櫃檯花了 ' + (total / 1000).toFixed(1) + ' 秒' + extra;
+            btn.disabled = false;
+          }
+        }, reduce ? 0 : total);
+      });
+    });
+  }
+  runTrace(
+    document.getElementById('run-ticket'),
+    document.getElementById('trace-ticket'),
+    document.getElementById('time-ticket'),
+    [[300, '收到號碼牌：A27'], [900, '走到後面，翻開資料櫃……'], [900, '找到了：A27 是 {N}，一般會員'], [300, '好，請進！']],
+    '，其中 1.8 秒在翻櫃子'
+  );
+  runTrace(
+    document.getElementById('run-pass'),
+    document.getElementById('trace-pass'),
+    document.getElementById('time-pass'),
+    [[300, '看一眼：{N}，一般會員，今天有效'], [300, '好，請進！']],
+    ''
+  );
+
+  // 偷改通行證
+  const replies = {
+    '一般會員': ['好的 {N}，這是你的帳本。', 'good'],
+    'VIP 貴賓': ['哇，VIP 貴賓！這邊請，免費升級頭等艙。', 'bad'],
+    '系統管理員': ['管理員您好！所有人的帳本都開放給您看。', 'bad']
+  };
+  document.getElementById('show-forged').addEventListener('click', () => {
+    const role = document.getElementById('role').value;
+    const [text, tone] = replies[role];
+    const log = document.getElementById('forge-log');
+    log.innerHTML = '';
+    const you = document.createElement('div');
+    you.className = 'msg you';
+    you.innerHTML = '<span class="who">你</span>（遞出通行證：身分寫著「' + role + '」）';
+    const desk = document.createElement('div');
+    desk.className = 'msg desk ' + tone;
+    desk.innerHTML = '<span class="who">櫃檯</span>' + text.replace('{N}', window.jwksNameHTML());
+    log.append(you, desk);
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>第 11 課　親手蓋一次章｜JWKS 小學堂</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔏</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@900&family=Permanent+Marker&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <!-- 潦草線：大幅抖動＋炭筆顆粒，用在框線與色塊 -->
+  <filter id="scrawl" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="3" seed="5" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="6" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="9" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.4 0 0 0 2.2" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 油蠟筆：更粗的顆粒，紙紋會從色塊裡透出來 -->
+  <filter id="crayon" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="2" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="4" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="2" seed="12" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3.2 0 0 0 2.55" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 麥克筆字：只抖動、不加顆粒，標題用 -->
+  <filter id="marker" x="-4%" y="-10%" width="108%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+<header class="topbar">
+  <a class="badge" href="index.html" aria-label="回課程首頁">首頁</a>
+  <span class="by"><i>By</i> 小學堂</span>
+  <span class="micro" aria-hidden="true">A BEGINNER'S GUIDE TO SIGNED TOKENS, PUBLIC KEYS AND THE JWKS ENDPOINT. ONE STEP AT A TIME.</span>
+  <span class="where">第 11 課 <i>of</i> 16</span>
+</header>
+
+<main class="wrap" data-lesson="11">
+  <div class="progress"><div class="dots" aria-hidden="true"></div><span class="progress-text"></span></div>
+
+  <section class="step">
+    <h1 class="ransom">親手蓋一次章</h1>
+    <p class="lead">這一課不用比喻了。我們要在你的瀏覽器裡，<strong>真的</strong>做一對金鑰、蓋一張通行證、再檢查它。</p>
+    <p class="note">用的是瀏覽器內建的密碼學功能，和真實網站用的是同一套。</p>
+  </section>
+
+  <section class="step">
+    <h2>第一步：做一顆印章</h2>
+    <p>按下按鈕，瀏覽器會產生一對新的金鑰：一把私鑰（印章）和一把公鑰（印鑑證明）。</p>
+    <div class="sim">
+      <div class="actions"><button class="btn primary" id="l11-gen">做一顆印章</button></div>
+      <dl class="kv">
+        <dt>私鑰（印章）</dt><dd id="l11-priv">還沒做</dd>
+        <dt>公鑰（印鑑證明）</dt><dd class="fp" id="l11-pub">還沒做</dd>
+        <dt>蓋章方式</dt><dd id="l11-alg">—</dd>
+      </dl>
+    </div>
+    <p>私鑰我們刻意不顯示，因為它就是總部的印章，<strong>永遠不應該拿出來給別人看</strong>。</p>
+  </section>
+
+  <section class="step">
+    <h2>第二步：蓋章</h2>
+    <p>用剛做好的印章，幫 <span data-name>小明</span> 的通行證蓋章：</p>
+    <div class="sim">
+      <div class="actions"><button class="btn primary" id="l11-sign">蓋章！</button></div>
+      <p class="jwt colored" id="l11-token">（先回上一步做一顆印章）</p>
+      <p class="feedback" id="l11-sign-msg" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>第三步：分店用印鑑證明檢查</h2>
+    <p>分店只拿到公鑰。它把前兩段和第三段的章，交給公鑰比對：</p>
+    <div class="sim">
+      <div class="actions"><button class="btn primary" id="l11-verify">用印鑑證明檢查</button></div>
+      <p class="feedback" id="l11-verify-msg" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>第四步：換一顆印章試試</h2>
+    <p>如果有人用<strong>另一顆印章</strong>蓋同一份內容，會怎樣？</p>
+    <div class="sim">
+      <div class="actions"><button class="btn" id="l11-other">用另一顆印章蓋同一份內容</button></div>
+      <p class="jwt colored" id="l11-token2"></p>
+      <p class="feedback" id="l11-other-msg" aria-live="polite"></p>
+    </div>
+    <p>內容一模一樣，但章完全不同，而且用總部的印鑑證明比對不過。<strong>每一顆印章蓋出來的章都是獨一無二的。</strong></p>
+  </section>
+
+  <section class="step">
+    <h2>這一課學到的</h2>
+    <p>你剛剛真的做了一對金鑰，用<strong>私鑰蓋章</strong>、用<strong>公鑰檢查</strong>。整個過程，分店都沒有碰到私鑰。</p>
+    <p>不是這顆印章蓋的章，用它的印鑑證明比對一定過不了。下一課，再當一次壞人，看看還有沒有漏洞。</p>
+
+    <div class="finish">
+      <span class="slot"></span>
+      <button class="btn primary" data-complete>我學會了，蓋章</button>
+    </div>
+    <div class="after-complete" hidden>
+      <p>蓋好了，這個章會留在首頁的集章卡上。</p>
+      <div class="actions">
+        <a class="btn primary" href="lesson-12.html">前往第 12 課</a>
+        <a class="btn" href="index.html">回課程首頁</a>
+      </div>
+    </div>
+  </section>
+
+  <nav class="stepnav" aria-label="步驟">
+    <button class="btn" data-prev>上一步</button>
+    <button class="btn primary" data-next>下一步</button>
+  </nav>
+</main>
+
+<script src="course.js"></script>
+<script>
+  (() => {
+
+    const enc = new TextEncoder();
+    const $ = (id) => document.getElementById(id);
+    const b64uBytes = (buf) => { let bin = ''; new Uint8Array(buf).forEach((b) => { bin += String.fromCharCode(b); }); return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+    const b64u = (str) => b64uBytes(enc.encode(str));
+    const unb64u = (s) => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); };
+    const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    const hasCrypto = !!(window.crypto && crypto.subtle);
+    const sha256 = async (s) => hex(await crypto.subtle.digest('SHA-256', enc.encode(s)));
+    const hmac = async (secret, msg) => {
+      const k = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+      return b64uBytes(await crypto.subtle.sign('HMAC', k, enc.encode(msg)));
+    };
+    const IAT = 1791856800, EXP = 1791857700;
+    const payload = (extra) => Object.assign({ iss: 'https://auth.example.com', sub: window.jwksName(), aud: 'ledger', role: 'member', iat: IAT, exp: EXP }, extra || {});
+    const makeKeys = async () => {
+      try {
+        const k = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+        return { publicKey: k.publicKey, privateKey: k.privateKey, alg: 'EdDSA', algo: { name: 'Ed25519' } };
+      } catch (e) {
+        const k = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+        return { publicKey: k.publicKey, privateKey: k.privateKey, alg: 'ES256', algo: { name: 'ECDSA', hash: 'SHA-256' } };
+      }
+    };
+    const signJWT = async (keys, kid, body) => {
+      const h = b64u(JSON.stringify({ alg: keys.alg, typ: 'JWT', kid }));
+      const p = b64u(JSON.stringify(body));
+      const sig = await crypto.subtle.sign(keys.algo, keys.privateKey, enc.encode(h + '.' + p));
+      return { h, p, s: b64uBytes(sig) };
+    };
+    const verifyJWT = async (keys, t) => {
+      try { return await crypto.subtle.verify(keys.algo, keys.publicKey, unb64u(t.s), enc.encode(t.h + '.' + t.p)); }
+      catch (e) { return false; }
+    };
+    const tokenHTML = (t, mark) => `<span class="seg h${mark === 'h' ? ' changed' : ''}">${t.h}</span><span class="pt">.</span><span class="seg p${mark === 'p' ? ' changed' : ''}">${t.p}</span><span class="pt">.</span><span class="seg s${mark === 's' ? ' changed' : ''}">${t.s}</span>`;
+    const pill = (ok, yes, no) => ok ? `<span class="pill ok">${yes}</span>` : `<span class="pill bad">${no}</span>`;
+    const short = (s, n = 18) => s.length > n ? s.slice(0, n) + '…' : s;
+    const onName = (fn) => document.addEventListener('jwks:name', fn);
+    const noCrypto = (el) => { el.innerHTML = '這台裝置的瀏覽器不支援密碼學功能，換一個新一點的瀏覽器就能試了。'; };
+
+    let keys = null, token = null;
+    $('l11-gen').addEventListener('click', async () => {
+      if (!hasCrypto) return noCrypto($('l11-pub'));
+      keys = await makeKeys();
+      const jwk = await crypto.subtle.exportKey('jwk', keys.publicKey);
+      $('l11-priv').textContent = '已經做好，鎖在總部（不顯示）';
+      $('l11-pub').textContent = jwk.x + (jwk.y ? ' / ' + jwk.y : '');
+      $('l11-alg').textContent = keys.alg === 'EdDSA' ? 'EdDSA（Ed25519）' : 'ES256（你的瀏覽器不支援 Ed25519，改用這種，原理相同）';
+      token = null;
+      $('l11-token').textContent = '印章做好了，到下一步蓋章。';
+      $('l11-gen').textContent = '重做一顆新的';
+    });
+    const sign = async () => {
+      if (!keys) { $('l11-sign-msg').textContent = '還沒有印章，先回上一步按「做一顆印章」。'; return; }
+      token = await signJWT(keys, 'hq-key-1', payload());
+      $('l11-token').innerHTML = tokenHTML(token);
+      $('l11-sign-msg').textContent = '蓋好了！綠色的第三段，就是你的私鑰剛剛算出來的簽章。';
+    };
+    $('l11-sign').addEventListener('click', sign);
+    onName(() => { if (token) sign(); });
+    $('l11-verify').addEventListener('click', async () => {
+      const m = $('l11-verify-msg');
+      if (!token) { m.textContent = '還沒有蓋好的通行證，先回上一步蓋章。'; return; }
+      const ok = await verifyJWT(keys, token);
+      m.innerHTML = pill(ok, '對得上', '對不上') + (ok ? ' 這張通行證確實是這顆印章蓋的，內容也沒被改過。' : ' 比對失敗。');
+    });
+    $('l11-other').addEventListener('click', async () => {
+      const m = $('l11-other-msg');
+      if (!token) { m.textContent = '先完成前面的步驟：做印章、蓋章。'; return; }
+      const other = await makeKeys();
+      const t2 = await signJWT(other, 'hq-key-1', payload());
+      $('l11-token2').innerHTML = tokenHTML(t2, 's');
+      const ok = await verifyJWT(keys, t2);
+      m.innerHTML = pill(ok, '對得上', '對不上') + ' 前兩段一樣，第三段的章完全不同，總部的印鑑證明不認它。';
+    });
+
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>第 1 課　網站怎麼知道你是你｜JWKS 小學堂</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔏</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@900&family=Permanent+Marker&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <!-- 潦草線：大幅抖動＋炭筆顆粒，用在框線與色塊 -->
+  <filter id="scrawl" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="3" seed="5" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="6" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="9" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.4 0 0 0 2.2" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 油蠟筆：更粗的顆粒，紙紋會從色塊裡透出來 -->
+  <filter id="crayon" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="2" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="4" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="2" seed="12" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3.2 0 0 0 2.55" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 麥克筆字：只抖動、不加顆粒，標題用 -->
+  <filter id="marker" x="-4%" y="-10%" width="108%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+<header class="topbar">
+  <a class="badge" href="index.html" aria-label="回課程首頁">首頁</a>
+  <span class="by"><i>By</i> 小學堂</span>
+  <span class="micro" aria-hidden="true">A BEGINNER'S GUIDE TO SIGNED TOKENS, PUBLIC KEYS AND THE JWKS ENDPOINT. ONE STEP AT A TIME.</span>
+  <span class="where">第 1 課 <i>of</i> 16</span>
+</header>
+
+<main class="wrap" data-lesson="01">
+  <div class="progress"><div class="dots" aria-hidden="true"></div><span class="progress-text"></span></div>
+
+  <section class="step">
+    <h1 class="ransom">網站怎麼知道你是你</h1>
+    <p class="lead">你每天都在登入：信箱、網購、記帳 App。輸入一次密碼，接下來點來點去，網站好像都記得你。</p>
+    <p>這一課要回答一個看起來很簡單的問題：<strong>網站到底是怎麼記得你的？</strong></p>
+    <p class="note">大約 5 分鐘，不需要任何程式基礎。</p>
+  </section>
+
+  <section class="step">
+    <h2>伺服器是個健忘的櫃檯</h2>
+    <p>想像網站背後有一位櫃檯人員，專門處理你的每一個要求：看帳本、記一筆支出、改設定。</p>
+    <p>但這位櫃檯有個怪毛病：<strong>每件事一處理完，就立刻忘記你是誰。</strong>你上一秒才跟他講過話，下一秒他就不認得你了。</p>
+    <div class="real">
+      <p class="label">真實世界</p>
+      <p>網站的伺服器真的是這樣運作的。你每點一下，瀏覽器就送出一個獨立的<dfn class="term">請求<small>request</small></dfn>，伺服器處理完就結束，不會自動記得上一個請求是誰送來的。</p>
+      <p>這種特性叫做<dfn class="term">無狀態<small>stateless</small></dfn>。</p>
+    </div>
+    <p>為什麼要設計得這麼健忘？因為伺服器同時要服務成千上萬人。如果要一直記著每個人，很快就會塞爆。<strong>健忘，反而讓它能服務更多人。</strong></p>
+  </section>
+
+  <section class="step">
+    <h2>試試看：健忘的櫃檯</h2>
+    <p>先按「登入」，再試著看你的帳本或記一筆帳。</p>
+    <div class="sim" id="desk-plain">
+      <div class="log" aria-live="polite"></div>
+      <div class="actions">
+        <button class="btn btn-sm" data-act="login">登入（帳號 <span data-name>小明</span>）</button>
+        <button class="btn btn-sm" data-act="view">看我的帳本</button>
+        <button class="btn btn-sm" data-act="add">記一筆午餐</button>
+        <button class="btn btn-sm btn-ghost" data-act="reset">重來</button>
+      </div>
+    </div>
+    <p>發現了嗎？明明剛剛才登入成功，櫃檯馬上就不認得你了。</p>
+  </section>
+
+  <section class="step">
+    <h2>那每次都報上帳號密碼呢？</h2>
+    <p>最直覺的解法：每做一件事，都把帳號密碼再講一次。這樣櫃檯就一定知道你是誰。</p>
+    <p>可以是可以，但有兩個問題。</p>
+    <p><strong>密碼到處跑很危險。</strong>每點一下，密碼就被送出去一次。送得越多次，被偷看的機會就越大。</p>
+    <p><strong>每次都核對密碼很慢。</strong>核對密碼這件事，是刻意設計得很費工的，這樣壞人才沒辦法一秒猜幾百萬次。如果每點一下都核對一次，網站就會變得很卡。</p>
+    <p>我們需要更好的辦法。</p>
+  </section>
+
+  <section class="step">
+    <h2>登入一次，換一個證明</h2>
+    <p>去遊樂園的時候，你只在門口買一次票。買完票，工作人員給你一個手環。之後玩每一個設施，亮一下手環就好，不用每次都掏錢包。</p>
+    <p>網站也是這樣：</p>
+    <div class="table-scroll">
+      <table class="compare">
+        <thead><tr><th scope="col">遊樂園</th><th scope="col">網站</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">在門口買票</th><td>登入：輸入帳號密碼，只做一次</td></tr>
+          <tr><th scope="row">拿到手環</th><td>拿到一個「證明」</td></tr>
+          <tr><th scope="row">每個設施亮一下手環</th><td>之後每次請求，瀏覽器都自動附上這個證明</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>這個「證明」，就是整套課程的主角。</p>
+  </section>
+
+  <section class="step">
+    <h2>再試一次，這次有手環</h2>
+    <p>一樣先登入，再看帳本、記帳。注意你每次說話時，多帶了什麼。</p>
+    <div class="sim" id="desk-band">
+      <div class="log" aria-live="polite"></div>
+      <div class="actions">
+        <button class="btn btn-sm" data-act="login">登入（帳號 <span data-name>小明</span>）</button>
+        <button class="btn btn-sm" data-act="view">看我的帳本</button>
+        <button class="btn btn-sm" data-act="add">記一筆午餐</button>
+        <button class="btn btn-sm btn-ghost" data-act="reset">重來</button>
+      </div>
+    </div>
+    <p>櫃檯還是一樣健忘，他並沒有記住你。是<strong>你每次都帶著手環</strong>，所以他每次都認得出來。</p>
+  </section>
+
+  <section class="step">
+    <h2>這一課學到的</h2>
+    <p>網站的伺服器很健忘，每個請求處理完就忘記你是誰（<dfn class="term">無狀態</dfn>）。</p>
+    <p>每次都報帳號密碼又危險又慢，所以網站的做法是：<strong>登入一次，換一個證明，之後每次都出示這個證明。</strong></p>
+    <p>下一課會看到，這個「證明」其實有兩種完全不同的做法。</p>
+
+    <div class="finish">
+      <span class="slot"></span>
+      <button class="btn primary" data-complete>我學會了，蓋章</button>
+    </div>
+    <div class="after-complete" hidden>
+      <p>蓋好了，這個章會留在首頁的集章卡上。</p>
+      <div class="actions">
+        <a class="btn primary" href="lesson-02.html">前往第 2 課</a>
+        <a class="btn" href="index.html">回課程首頁</a>
+      </div>
+    </div>
+  </section>
+
+  <nav class="stepnav" aria-label="步驟">
+    <button class="btn" data-prev>上一步</button>
+    <button class="btn primary" data-next>下一步</button>
+  </nav>
+</main>
+
+<script src="course.js"></script>
+<script>
+  // 健忘櫃檯模擬：band = 是否會發手環
+  function deskSim(root, band) {
+    const log = root.querySelector('.log');
+    let hasBand = false;
+
+    const say = (who, html, tone) => {
+      const m = document.createElement('div');
+      m.className = 'msg ' + (who === 'you' ? 'you' : 'desk') + (tone ? ' ' + tone : '');
+      m.innerHTML = '<span class="who">' + (who === 'you' ? '你' : '櫃檯') + '</span>' + html;
+      log.appendChild(m);
+      log.scrollTop = log.scrollHeight;
+    };
+    const reset = () => { hasBand = false; log.innerHTML = ''; say('desk', '歡迎光臨！請先登入。'); };
+
+    root.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-act]');
+      if (!b) return;
+      const act = b.dataset.act;
+
+      if (act === 'reset') return reset();
+
+      if (act === 'login') {
+        say('you', `我是 ${window.jwksNameHTML()}，密碼是 ••••••`);
+        if (band) {
+          hasBand = true;
+          say('desk', `密碼正確，歡迎 ${window.jwksNameHTML()}！這是你的手環 <b>#0412</b>，之後亮一下就好。`, 'good');
+        } else {
+          say('desk', `密碼正確，歡迎 ${window.jwksNameHTML()}！`, 'good');
+        }
+        return;
+      }
+
+      const ask = act === 'view' ? '我想看我的帳本' : '幫我記一筆：午餐 120 元';
+      if (band && hasBand) {
+        say('you', ask + '<br><small>（同時亮出手環 #0412）</small>');
+        say('desk', act === 'view'
+          ? `看到手環了。${window.jwksNameHTML()} 你好，這是你的帳本。`
+          : `看到手環了。已經幫 ${window.jwksNameHTML()} 記下：午餐 120 元。`, 'good');
+      } else {
+        say('you', ask);
+        say('desk', '呃……請問你是哪位？我不認識你。', 'bad');
+      }
+    });
+    reset();
+  }
+  deskSim(document.getElementById('desk-plain'), false);
+  deskSim(document.getElementById('desk-band'), true);
+</script>
+</body>
+</html>

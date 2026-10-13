@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>第 6 課　拆開通行證｜JWKS 小學堂</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔏</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@900&family=Permanent+Marker&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <!-- 潦草線：大幅抖動＋炭筆顆粒，用在框線與色塊 -->
+  <filter id="scrawl" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="3" seed="5" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="6" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="9" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.4 0 0 0 2.2" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 油蠟筆：更粗的顆粒，紙紋會從色塊裡透出來 -->
+  <filter id="crayon" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="2" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="4" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="2" seed="12" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3.2 0 0 0 2.55" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 麥克筆字：只抖動、不加顆粒，標題用 -->
+  <filter id="marker" x="-4%" y="-10%" width="108%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+<header class="topbar">
+  <a class="badge" href="index.html" aria-label="回課程首頁">首頁</a>
+  <span class="by"><i>By</i> 小學堂</span>
+  <span class="micro" aria-hidden="true">A BEGINNER'S GUIDE TO SIGNED TOKENS, PUBLIC KEYS AND THE JWKS ENDPOINT. ONE STEP AT A TIME.</span>
+  <span class="where">第 6 課 <i>of</i> 16</span>
+</header>
+
+<main class="wrap" data-lesson="06">
+  <div class="progress"><div class="dots" aria-hidden="true"></div><span class="progress-text"></span></div>
+
+  <section class="step">
+    <h1 class="ransom">拆開通行證</h1>
+    <p class="lead">現在你知道 base64 只是換包裝了。這一課，我們把第 4 課那張通行證的前兩段拆開來看。</p>
+    <p class="jwt colored" id="l6-jwt" aria-label="一張 JWT 通行證，由兩個點分成三段"><span class="seg h">eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCIsImtpZCI6ImFiYzEyMyJ9</span><span class="pt">.</span><span class="seg p">eyJpc3MiOiJodHRwczovL2F1dGguZXhhbXBsZS5jb20iLCJzdWIiOiLlsI_mmI4iLCJhdWQiOiJsZWRnZXIiLCJyb2xlIjoibWVtYmVyIiwiaWF0IjoxNzkxODU2ODAwLCJleHAiOjE3OTE4NTc3MDB9</span><span class="pt">.</span><span class="seg s">AtYMpoawQJ0ax16ASnQ5UX5tGRS00klMRHex1-efRUzvDE2eSXX3uZnAnbFnr7xP6UsvLOi6XytkxASBbWPTyw</span></p>
+  </section>
+
+  <section class="step">
+    <h2>拆開第一段：抬頭</h2>
+    <p>把粉紅色的第一段丟進轉換機，會得到這個。<strong>點一行</strong>看看它是什麼意思：</p>
+    <div class="json" data-explain="l6-ex1">
+      <span class="brace">{</span>
+      <button class="field" data-text="alg 是「蓋章的方式」。總部可以用很多種方式蓋章，這裡寫的是 EdDSA，分店要用同一種方式來檢查。">"alg": "EdDSA",</button>
+      <button class="field" data-text="typ 是「這是什麼東西」。JWT 就是告訴大家：這是一張 JWT 通行證。">"typ": "JWT",</button>
+      <button class="field" data-text="kid 是「用的是哪一顆章」。總部可能有好幾顆章，這是章的編號。第 14 課換印章時，它會很重要。">"kid": "abc123"</button>
+      <span class="brace">}</span>
+    </div>
+    <p class="explain" id="l6-ex1" aria-live="polite">（點上面任何一行）</p>
+    <div class="real">
+      <p class="label">真實世界</p>
+      <p>這種用大括號和引號寫資料的格式叫做 <dfn class="term">JSON</dfn>。每一行都是「名稱：值」的組合。</p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>拆開第二段：內容</h2>
+    <p>黃色的第二段解開後，就是通行證上的所有資料。一樣點一行看看：</p>
+    <div class="json" data-explain="l6-ex2">
+      <span class="brace">{</span>
+      <button class="field" data-text="iss 是「誰發的」。這張是 auth.example.com 發的，也就是我們故事裡的總部。">"iss": "https://auth.example.com",</button>
+      <button class="field" data-text="sub 是「這張是誰的」。這張通行證屬於你：{N}。">"sub": "<span data-name>小明</span>",</button>
+      <button class="field" data-text="aud 是「給哪間分店用的」。這張只能在 ledger（記帳分店）使用，拿去別間分店應該要被拒絕。">"aud": "ledger",</button>
+      <button class="field" data-text="role 是總部自己加的欄位：身分是一般會員。除了幾個常見的名稱，總部可以加任何需要的資料。">"role": "member",</button>
+      <button class="field" data-text="iat 是「什麼時候發的」。它是一個很大的數字，下一步會解釋它怎麼讀。">"iat": 1791856800,</button>
+      <button class="field" data-text="exp 是「什麼時候到期」。過了這個時間，分店就不該再接受這張通行證。">"exp": 1791857700</button>
+      <span class="brace">}</span>
+    </div>
+    <p class="explain" id="l6-ex2" aria-live="polite">（點上面任何一行）</p>
+    <div class="real">
+      <p class="label">真實世界</p>
+      <p>內容裡的每一條資料，叫做一個 <dfn class="term">claim<small>聲明</small></dfn>。iss、sub、aud、iat、exp 都是大家約定好的名稱，所以只有三個字母，讓通行證短一點。</p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>那串大數字是時間</h2>
+    <p>電腦記時間的方式很特別：從 1970 年 1 月 1 日開始，<strong>數過了幾秒</strong>。所以 1791856800 其實是一個日期。</p>
+    <div class="sim">
+      <dl class="kv">
+        <dt>發證 iat</dt><dd id="l6-iat"></dd>
+        <dt>到期 exp</dt><dd id="l6-exp"></dd>
+      </dl>
+      <div class="range-row">
+        <label for="l6-min">發證後過了</label>
+        <input type="range" id="l6-min" min="0" max="30" value="5">
+        <output id="l6-min-out" for="l6-min"></output>
+      </div>
+      <p class="feedback" id="l6-status" aria-live="polite"></p>
+    </div>
+    <p>把滑桿拉過 15 分鐘看看。到期時間一過，同一張通行證就沒用了。</p>
+  </section>
+
+  <section class="step">
+    <h2>做一張你自己的通行證</h2>
+    <p>既然拆得開，就也組得回去。填一填，下面會即時做出一張通行證：</p>
+    <div class="sim">
+      <div class="io">
+        <label for="l6-name">名字（sub）</label>
+        <input type="text" id="l6-name" value="" autocomplete="off" spellcheck="false">
+        <label for="l6-role">身分（role）</label>
+        <select id="l6-role"><option value="member">member 一般會員</option><option value="vip">vip 貴賓</option><option value="admin">admin 管理員</option></select>
+      </div>
+      <p class="jwt colored" id="l6-made"></p>
+    </div>
+    <p>前兩段你自己就做得出來。但第三段印章是空的，因為<strong>你沒有總部的印章</strong>。</p>
+  </section>
+
+  <section class="step">
+    <h2>這一課學到的</h2>
+    <p>第一段抬頭寫著<strong>蓋章方式</strong>和<strong>用哪一顆章</strong>；第二段內容寫著<strong>誰發的、是誰的、給誰用、什麼時候到期</strong>。</p>
+    <p>時間是從 1970 年開始數的秒數。過了到期時間，通行證就失效。</p>
+    <p>你也發現了：前兩段誰都做得出來。那分店要怎麼分辨真假？答案在第三段，下一課揭曉。</p>
+
+    <div class="finish">
+      <span class="slot"></span>
+      <button class="btn primary" data-complete>我學會了，蓋章</button>
+    </div>
+    <div class="after-complete" hidden>
+      <p>蓋好了，這個章會留在首頁的集章卡上。</p>
+      <div class="actions">
+        <a class="btn primary" href="lesson-07.html">前往第 7 課</a>
+        <a class="btn" href="index.html">回課程首頁</a>
+      </div>
+    </div>
+  </section>
+
+  <nav class="stepnav" aria-label="步驟">
+    <button class="btn" data-prev>上一步</button>
+    <button class="btn primary" data-next>下一步</button>
+  </nav>
+</main>
+
+<script src="course.js"></script>
+<script>
+  (() => {
+    const b64u = (str) => { const bytes = new TextEncoder().encode(str); let bin = ''; bytes.forEach((b) => { bin += String.fromCharCode(b); }); return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+    const unb64u = (s) => { s = s.trim().replace(/-/g, '+').replace(/_/g, '/'); if (/[^A-Za-z0-9+/]/.test(s)) throw new Error('bad'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); };
+    const asText = (bytes) => new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const IAT = 1791856800, EXP = 1791857700;
+    // 通行證內容：sub 用學習者自己的名字
+    const payload = (extra) => Object.assign({ iss: 'https://auth.example.com', sub: window.jwksName(), aud: 'ledger', role: 'member', iat: IAT, exp: EXP }, extra || {});
+    const P = () => b64u(JSON.stringify(payload()));
+    const onName = (fn) => document.addEventListener('jwks:name', fn);
+    document.querySelectorAll('#l6-ex1, #l6-ex2').forEach((ex) => {
+      const box = document.querySelector(`[data-explain="${ex.id}"]`);
+      box.addEventListener('click', (e) => {
+        const f = e.target.closest('.field');
+        if (!f) return;
+        box.querySelectorAll('.field').forEach((x) => x.classList.toggle('on', x === f));
+        ex.textContent = f.dataset.text.replace('{N}', window.jwksName());
+      });
+    });
+    const fillP = () => document.querySelectorAll('#l6-jwt .p').forEach((el) => { el.textContent = P(); });
+    fillP(); onName(fillP);
+    const fmt = (sec) => new Date(sec * 1000).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+    document.getElementById('l6-iat').textContent = `${IAT}，也就是 ${fmt(IAT)}`;
+    document.getElementById('l6-exp').textContent = `${EXP}，也就是 ${fmt(EXP)}`;
+    const min = document.getElementById('l6-min');
+    const upd = () => {
+      const now = IAT + Number(min.value) * 60;
+      document.getElementById('l6-min-out').textContent = `${min.value} 分鐘`;
+      const ok = now < EXP;
+      document.getElementById('l6-status').innerHTML = `現在是 ${fmt(now)}：` +
+        (ok ? `<span class="pill ok">有效</span> 還剩 ${Math.round((EXP - now) / 60)} 分鐘` : '<span class="pill bad">已過期</span> 分店應該拒絕這張通行證');
+    };
+    min.addEventListener('input', upd); upd();
+    const H = 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCIsImtpZCI6ImFiYzEyMyJ9';
+    const mk = () => {
+      const p = { iss: 'https://auth.example.com', sub: document.getElementById('l6-name').value || '（沒填）', aud: 'ledger', role: document.getElementById('l6-role').value, iat: IAT, exp: EXP };
+      document.getElementById('l6-made').innerHTML =
+        `<span class="seg h">${H}</span><span class="pt">.</span><span class="seg p">${b64u(JSON.stringify(p))}</span><span class="pt">.</span><span class="seg s s-empty">（第三段：沒有印章）</span>`;
+    };
+    document.getElementById('l6-name').addEventListener('input', mk);
+    document.getElementById('l6-role').addEventListener('change', mk);
+    const seedName = () => { document.getElementById('l6-name').value = window.jwksName(); mk(); };
+    seedName(); onName(seedName);
+  })();
+</script>
+</body>
+</html>

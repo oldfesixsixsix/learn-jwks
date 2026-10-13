@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>第 5 課　base64 不是加密｜JWKS 小學堂</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔏</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@900&family=Permanent+Marker&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <!-- 潦草線：大幅抖動＋炭筆顆粒，用在框線與色塊 -->
+  <filter id="scrawl" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="3" seed="5" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="6" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="9" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.4 0 0 0 2.2" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 油蠟筆：更粗的顆粒，紙紋會從色塊裡透出來 -->
+  <filter id="crayon" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="2" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="4" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="2" seed="12" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3.2 0 0 0 2.55" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 麥克筆字：只抖動、不加顆粒，標題用 -->
+  <filter id="marker" x="-4%" y="-10%" width="108%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+<header class="topbar">
+  <a class="badge" href="index.html" aria-label="回課程首頁">首頁</a>
+  <span class="by"><i>By</i> 小學堂</span>
+  <span class="micro" aria-hidden="true">A BEGINNER'S GUIDE TO SIGNED TOKENS, PUBLIC KEYS AND THE JWKS ENDPOINT. ONE STEP AT A TIME.</span>
+  <span class="where">第 5 課 <i>of</i> 16</span>
+</header>
+
+<main class="wrap" data-lesson="05">
+  <div class="progress"><div class="dots" aria-hidden="true"></div><span class="progress-text"></span></div>
+
+  <section class="step">
+    <h1 class="ransom">base64 不是加密</h1>
+    <p class="lead">上一課說，通行證被「轉換」成一長串英文字母和數字。</p>
+    <p>很多人看到這種亂碼，第一個反應是：「喔，這是加密過的，很安全。」這一課要告訴你：<strong>完全不是這樣。</strong></p>
+  </section>
+
+  <section class="step">
+    <h2>base64 是一張公開的對照表</h2>
+    <p>還記得摩斯密碼嗎？「・－」代表 A，「－・・・」代表 B。看起來很神秘，但對照表到處都查得到，誰都能翻回來。</p>
+    <p>base64 也是一張對照表。它把任何資料，換成 64 個「安全字元」來表示：大寫 A 到 Z、小寫 a 到 z、數字 0 到 9，再加兩個符號。</p>
+    <div class="real">
+      <p class="label">真實世界</p>
+      <p>通行證用的是稍微改良過的 <dfn class="term">base64url</dfn>：把容易在網址裡出問題的「+」和「/」換成「-」和「_」，並拿掉結尾的「=」。原理完全一樣。</p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>試試看：轉換機</h2>
+    <p>在上面打任何字，中文也可以，下面會立刻變成 base64url。</p>
+    <div class="sim">
+      <div class="io">
+        <label for="l5-in">原本的文字</label>
+        <textarea id="l5-in"></textarea>
+        <span class="lbl">轉換後</span>
+        <output class="out" id="l5-out" for="l5-in"></output>
+      </div>
+      <div class="io">
+        <label for="l5-din">反過來：貼一串 base64url 進來</label>
+        <input type="text" id="l5-din" value="" autocomplete="off" spellcheck="false">
+        <span class="lbl">還原後</span>
+        <output class="out" id="l5-dout" for="l5-din"></output>
+      </div>
+    </div>
+    <p>注意到了嗎？<strong>轉過去、轉回來，都不需要任何密碼。</strong></p>
+  </section>
+
+  <section class="step">
+    <h2>那加密是什麼？</h2>
+    <p>加密比較像把東西鎖進保險箱。沒有鑰匙，就算箱子擺在你面前，你也打不開。</p>
+    <div class="table-scroll">
+      <table class="compare">
+        <thead><tr><th scope="col"></th><th scope="col">base64（換包裝）</th><th scope="col">加密（上鎖）</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">需要鑰匙嗎</th><td>不需要</td><td>需要</td></tr>
+          <tr><th scope="row">誰能還原</th><td>任何人</td><td>只有拿到鑰匙的人</td></tr>
+          <tr><th scope="row">目的</th><td>方便傳送</td><td>保密</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>看起來看不懂，跟別人真的解不開，是兩回事。</p>
+  </section>
+
+  <section class="step">
+    <h2>挑戰：破解這一段</h2>
+    <p>這是從某張通行證裡剪下來的一段：</p>
+    <p class="jwt" id="l5-secret"></p>
+    <div class="actions"><button class="btn primary" id="l5-crack">丟進轉換機</button></div>
+    <output class="out" id="l5-crack-out" aria-live="polite"></output>
+    <p class="feedback" id="l5-crack-msg"></p>
+  </section>
+
+  <section class="step">
+    <h2>所以，通行證裡不能放什麼？</h2>
+    <p>既然誰拿到通行證都能看光第二段的內容，總部就<strong>不能在裡面放秘密</strong>，例如：</p>
+    <p>密碼、身分證字號、信用卡號、病歷，或任何你不想讓別人看到的東西。</p>
+    <div class="real">
+      <p class="label">真實世界</p>
+      <p>JWT 的內容預設是<strong>誰都能讀</strong>的。它保護的是「不能被偷改」，不是「不能被偷看」。怎麼做到不能被偷改，就是第三段印章的工作。</p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>這一課學到的</h2>
+    <p>base64 只是一張<strong>公開的對照表</strong>，把資料換成安全字元方便傳送，誰都能轉回來。</p>
+    <p>它<strong>不是加密</strong>，所以通行證的內容誰都看得到，裡面不能放秘密。</p>
+    <p>下一課，我們用轉換機把那張真的通行證整個拆開。</p>
+
+    <div class="finish">
+      <span class="slot"></span>
+      <button class="btn primary" data-complete>我學會了，蓋章</button>
+    </div>
+    <div class="after-complete" hidden>
+      <p>蓋好了，這個章會留在首頁的集章卡上。</p>
+      <div class="actions">
+        <a class="btn primary" href="lesson-06.html">前往第 6 課</a>
+        <a class="btn" href="index.html">回課程首頁</a>
+      </div>
+    </div>
+  </section>
+
+  <nav class="stepnav" aria-label="步驟">
+    <button class="btn" data-prev>上一步</button>
+    <button class="btn primary" data-next>下一步</button>
+  </nav>
+</main>
+
+<script src="course.js"></script>
+<script>
+  (() => {
+    const b64u = (str) => { const bytes = new TextEncoder().encode(str); let bin = ''; bytes.forEach((b) => { bin += String.fromCharCode(b); }); return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+    const unb64u = (s) => { s = s.trim().replace(/-/g, '+').replace(/_/g, '/'); if (/[^A-Za-z0-9+/]/.test(s)) throw new Error('bad'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); };
+    const asText = (bytes) => new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const IAT = 1791856800, EXP = 1791857700;
+    // 通行證內容：sub 用學習者自己的名字
+    const payload = (extra) => Object.assign({ iss: 'https://auth.example.com', sub: window.jwksName(), aud: 'ledger', role: 'member', iat: IAT, exp: EXP }, extra || {});
+    const P = () => b64u(JSON.stringify(payload()));
+    const onName = (fn) => document.addEventListener('jwks:name', fn);
+    const inp = document.getElementById('l5-in'), out = document.getElementById('l5-out');
+    const din = document.getElementById('l5-din'), dout = document.getElementById('l5-dout');
+    const enc = () => { out.textContent = b64u(inp.value) || '（打點字試試看）'; };
+    const dec = () => {
+      dout.classList.remove('err');
+      if (!din.value.trim()) { dout.textContent = '（貼一串進來試試看）'; return; }
+      try { dout.textContent = asText(unb64u(din.value)); }
+      catch (e) { dout.classList.add('err'); dout.textContent = '這串不是合法的 base64url，或解出來不是文字。'; }
+    };
+    inp.addEventListener('input', enc); din.addEventListener('input', dec);
+    const seed = () => {
+      inp.value = `我的名字是 ${window.jwksName()}`;
+      din.value = b64u(inp.value);
+      document.getElementById('l5-secret').textContent = b64u(JSON.stringify({ name: window.jwksName(), role: 'member' }));
+      document.getElementById('l5-crack-out').textContent = '';
+      document.getElementById('l5-crack-msg').textContent = '';
+      enc(); dec();
+    };
+    seed(); onName(seed);
+    document.getElementById('l5-crack').addEventListener('click', () => {
+      const text = asText(unb64u(document.getElementById('l5-secret').textContent));
+      const o = document.getElementById('l5-crack-out');
+      o.textContent = '';
+      let k = 0;
+      const tick = () => { o.textContent = text.slice(0, ++k); if (k < text.length) setTimeout(tick, 25); else document.getElementById('l5-crack-msg').textContent = '破解成功！你剛剛沒用任何密碼，就看到了名字和身分。'; };
+      tick();
+    });
+  })();
+</script>
+</body>
+</html>

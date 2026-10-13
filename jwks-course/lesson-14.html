@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>第 14 課　印章編號與換印章｜JWKS 小學堂</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔏</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@900&family=Permanent+Marker&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <!-- 潦草線：大幅抖動＋炭筆顆粒，用在框線與色塊 -->
+  <filter id="scrawl" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="3" seed="5" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="6" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="9" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.4 0 0 0 2.2" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 油蠟筆：更粗的顆粒，紙紋會從色塊裡透出來 -->
+  <filter id="crayon" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="2" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="4" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="2" seed="12" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3.2 0 0 0 2.55" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 麥克筆字：只抖動、不加顆粒，標題用 -->
+  <filter id="marker" x="-4%" y="-10%" width="108%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+<header class="topbar">
+  <a class="badge" href="index.html" aria-label="回課程首頁">首頁</a>
+  <span class="by"><i>By</i> 小學堂</span>
+  <span class="micro" aria-hidden="true">A BEGINNER'S GUIDE TO SIGNED TOKENS, PUBLIC KEYS AND THE JWKS ENDPOINT. ONE STEP AT A TIME.</span>
+  <span class="where">第 14 課 <i>of</i> 16</span>
+</header>
+
+<main class="wrap" data-lesson="14">
+  <div class="progress"><div class="dots" aria-hidden="true"></div><span class="progress-text"></span></div>
+
+  <section class="step">
+    <h1 class="ransom">印章編號與換印章</h1>
+    <p class="lead">印章用久了要換：可能是定期更換，也可能是懷疑被偷看過。</p>
+    <p>但總部已經發出去好多張通行證了。換了章之後，那些舊通行證怎麼辦？</p>
+  </section>
+
+  <section class="step">
+    <h2>公告欄可以同時貼好幾張</h2>
+    <p>每一顆印章都有編號（kid），通行證的抬頭會寫著「我是用幾號章蓋的」。</p>
+    <p>公告欄上可以<strong>同時貼好幾張印鑑證明</strong>。分店看通行證上的編號，挑對應的那一張來比對。新舊印章就能同時存在。</p>
+  </section>
+
+  <section class="step">
+    <h2>試試看：換印章的四個步驟</h2>
+    <p>依序按下每個步驟，看公告欄、舊通行證和新通行證會怎樣：</p>
+    <div class="sim">
+      <div class="stages" id="l14-stages">
+        <button class="btn btn-sm" data-s="0">① 平常</button>
+        <button class="btn btn-sm" data-s="1">② 先貼新章</button>
+        <button class="btn btn-sm" data-s="2">③ 改用新章</button>
+        <button class="btn btn-sm" data-s="3">④ 撤下舊章</button>
+      </div>
+      <div class="board"><p class="board-title">分店抄回來的公告</p><div class="notes" id="l14-board"></div></div>
+      <p class="explain" id="l14-desc" aria-live="polite"></p>
+      <ul class="log-list" id="l14-log" aria-live="polite"></ul>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>順序很重要</h2>
+    <p>如果總部<strong>先改用新章、才貼公告</strong>，會發生什麼事？</p>
+    <div class="sim">
+      <div class="actions"><button class="btn primary" id="l14-wrong">用錯誤的順序換章</button></div>
+      <ul class="log-list" id="l14-wrong-log" aria-live="polite"></ul>
+    </div>
+    <p>所以正確的順序是：<strong>先貼新的印鑑證明，等大家都抄到了，才開始用新章；等舊通行證都過期了，才撤下舊的。</strong></p>
+  </section>
+
+  <section class="step">
+    <h2>遇到沒見過的編號</h2>
+    <p>分店收到一張通行證，上面的印章編號在自己抄的公告上找不到。合理的做法是：<strong>回公告欄重新抄一次</strong>，還是找不到才拒絕。</p>
+    <div class="real">
+      <p class="label">真實世界</p>
+      <p>換印章叫做<dfn class="term">金鑰輪替<small>key rotation</small></dfn>。好用的驗證工具都會內建「遇到不認識的 kid 就重抓 JWKS」，所以只要總部照順序換，分店完全不用改程式。</p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>這一課學到的</h2>
+    <p>通行證抬頭的 <strong>kid</strong> 告訴分店該用哪一張印鑑證明。公告欄可以同時貼新舊兩張，所以換印章時舊通行證不會突然失效。</p>
+    <p>換章的順序：<strong>先貼新的 → 再改用新章 → 舊通行證都過期後撤下舊的</strong>。</p>
+
+    <div class="finish">
+      <span class="slot"></span>
+      <button class="btn primary" data-complete>我學會了，蓋章</button>
+    </div>
+    <div class="after-complete" hidden>
+      <p>蓋好了，這個章會留在首頁的集章卡上。</p>
+      <div class="actions">
+        <a class="btn primary" href="lesson-15.html">前往第 15 課</a>
+        <a class="btn" href="index.html">回課程首頁</a>
+      </div>
+    </div>
+  </section>
+
+  <nav class="stepnav" aria-label="步驟">
+    <button class="btn" data-prev>上一步</button>
+    <button class="btn primary" data-next>下一步</button>
+  </nav>
+</main>
+
+<script src="course.js"></script>
+<script>
+  (() => {
+
+    const enc = new TextEncoder();
+    const $ = (id) => document.getElementById(id);
+    const b64uBytes = (buf) => { let bin = ''; new Uint8Array(buf).forEach((b) => { bin += String.fromCharCode(b); }); return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+    const b64u = (str) => b64uBytes(enc.encode(str));
+    const unb64u = (s) => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); };
+    const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    const hasCrypto = !!(window.crypto && crypto.subtle);
+    const sha256 = async (s) => hex(await crypto.subtle.digest('SHA-256', enc.encode(s)));
+    const hmac = async (secret, msg) => {
+      const k = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+      return b64uBytes(await crypto.subtle.sign('HMAC', k, enc.encode(msg)));
+    };
+    const IAT = 1791856800, EXP = 1791857700;
+    const payload = (extra) => Object.assign({ iss: 'https://auth.example.com', sub: window.jwksName(), aud: 'ledger', role: 'member', iat: IAT, exp: EXP }, extra || {});
+    const makeKeys = async () => {
+      try {
+        const k = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+        return { publicKey: k.publicKey, privateKey: k.privateKey, alg: 'EdDSA', algo: { name: 'Ed25519' } };
+      } catch (e) {
+        const k = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+        return { publicKey: k.publicKey, privateKey: k.privateKey, alg: 'ES256', algo: { name: 'ECDSA', hash: 'SHA-256' } };
+      }
+    };
+    const signJWT = async (keys, kid, body) => {
+      const h = b64u(JSON.stringify({ alg: keys.alg, typ: 'JWT', kid }));
+      const p = b64u(JSON.stringify(body));
+      const sig = await crypto.subtle.sign(keys.algo, keys.privateKey, enc.encode(h + '.' + p));
+      return { h, p, s: b64uBytes(sig) };
+    };
+    const verifyJWT = async (keys, t) => {
+      try { return await crypto.subtle.verify(keys.algo, keys.publicKey, unb64u(t.s), enc.encode(t.h + '.' + t.p)); }
+      catch (e) { return false; }
+    };
+    const tokenHTML = (t, mark) => `<span class="seg h${mark === 'h' ? ' changed' : ''}">${t.h}</span><span class="pt">.</span><span class="seg p${mark === 'p' ? ' changed' : ''}">${t.p}</span><span class="pt">.</span><span class="seg s${mark === 's' ? ' changed' : ''}">${t.s}</span>`;
+    const pill = (ok, yes, no) => ok ? `<span class="pill ok">${yes}</span>` : `<span class="pill bad">${no}</span>`;
+    const short = (s, n = 18) => s.length > n ? s.slice(0, n) + '…' : s;
+    const onName = (fn) => document.addEventListener('jwks:name', fn);
+    const noCrypto = (el) => { el.innerHTML = '這台裝置的瀏覽器不支援密碼學功能，換一個新一點的瀏覽器就能試了。'; };
+    const unText = (s) => new TextDecoder().decode(unb64u(s));
+    const readJSON = (s) => { try { return JSON.parse(unText(s)); } catch (e) { return {}; } };
+    const exportPub = async (keys, kid) => Object.assign({ kid, use: 'sig', alg: keys.alg }, await crypto.subtle.exportKey('jwk', keys.publicKey));
+    const fmtTime = (sec) => new Date(sec * 1000).toLocaleTimeString('zh-TW', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hour12: false });
+
+    let A = null, B = null, oldT = null, newT = null;
+    const stages = [
+      { board: ['A'], signer: 'A', desc: '平常：總部用 A 章蓋，公告上只有 A。' },
+      { board: ['A', 'B'], signer: 'A', desc: '先把 B 章的印鑑證明貼上公告。這時還沒開始用 B，什麼都不會壞。' },
+      { board: ['A', 'B'], signer: 'B', desc: '改用 B 章蓋新通行證。舊的 A 通行證還在有效期內，一樣能用。' },
+      { board: ['B'], signer: 'B', desc: '等 A 章蓋的通行證都過期了，才把 A 撤下來。' }
+    ];
+    const check = async (board, t) => {
+      const kid = readJSON(t.h).kid;
+      if (!board.includes(kid)) return [false, `找不到 ${kid} 號章`];
+      const ok = await verifyJWT(kid === 'A' ? A : B, t);
+      return [ok, ok ? `用 ${kid} 號印鑑證明比對：通過` : '比對失敗'];
+    };
+    const runStage = async (i) => {
+      if (!A) return noCrypto($('l14-log'));
+      const st = stages[i];
+      $('l14-stages').querySelectorAll('.btn').forEach((b) => b.classList.toggle('on', +b.dataset.s === i));
+      $('l14-board').innerHTML = st.board.map((k) => `<span class="note-card${k === 'B' ? ' new' : ''}">kid: ${k}</span>`).join('');
+      $('l14-desc').textContent = st.desc;
+      const items = [];
+      const [o1, m1] = await check(st.board, oldT);
+      items.push(`<li class="${o1 ? 'ok' : 'bad'}">舊通行證（A 章蓋的）：${m1}${!o1 && i === 3 ? '（它已經過期了，本來就不該再用）' : ''}</li>`);
+      if (st.signer === 'B') { const [o2, m2] = await check(st.board, newT); items.push(`<li class="${o2 ? 'ok' : 'bad'}">新通行證（B 章蓋的）：${m2}</li>`); }
+      $('l14-log').innerHTML = items.join('');
+    };
+    $('l14-stages').addEventListener('click', (e) => { const b = e.target.closest('[data-s]'); if (b) runStage(+b.dataset.s); });
+    const init = async () => {
+      if (!hasCrypto) return noCrypto($('l14-log'));
+      A = A || await makeKeys(); B = B || await makeKeys();
+      oldT = await signJWT(A, 'A', payload());
+      newT = await signJWT(B, 'B', payload());
+      runStage(0);
+      $('l14-wrong-log').innerHTML = '';
+    };
+    init(); onName(init);
+    $('l14-wrong').addEventListener('click', async () => {
+      if (!A) return;
+      const [ok, m] = await check(['A'], newT);
+      $('l14-wrong-log').innerHTML =
+        '<li class="ok">總部直接改用 B 章蓋新通行證</li>' +
+        '<li class="ok">分店抄的公告還是舊的，上面只有 A</li>' +
+        `<li class="${ok ? 'ok' : 'bad'}">新通行證送到分店：${m}，被拒絕！</li>` +
+        '<li class="bad">所有剛登入的人，在每一間分店都被擋在門外</li>';
+    });
+
+  })();
+</script>
+</body>
+</html>

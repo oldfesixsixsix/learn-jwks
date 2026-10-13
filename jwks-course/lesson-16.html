@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>第 16 課　騙子的三個招數｜JWKS 小學堂</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔏</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@900&family=Permanent+Marker&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <!-- 潦草線：大幅抖動＋炭筆顆粒，用在框線與色塊 -->
+  <filter id="scrawl" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="3" seed="5" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="6" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="9" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.4 0 0 0 2.2" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 油蠟筆：更粗的顆粒，紙紋會從色塊裡透出來 -->
+  <filter id="crayon" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="2" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="4" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="2" seed="12" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3.2 0 0 0 2.55" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 麥克筆字：只抖動、不加顆粒，標題用 -->
+  <filter id="marker" x="-4%" y="-10%" width="108%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+<header class="topbar">
+  <a class="badge" href="index.html" aria-label="回課程首頁">首頁</a>
+  <span class="by"><i>By</i> 小學堂</span>
+  <span class="micro" aria-hidden="true">A BEGINNER'S GUIDE TO SIGNED TOKENS, PUBLIC KEYS AND THE JWKS ENDPOINT. ONE STEP AT A TIME.</span>
+  <span class="where">第 16 課 <i>of</i> 16</span>
+</header>
+
+<main class="wrap" data-lesson="16">
+  <div class="progress"><div class="dots" aria-hidden="true"></div><span class="progress-text"></span></div>
+
+  <section class="step">
+    <h1 class="ransom">騙子的三個招數</h1>
+    <p class="lead">最後一關。印章、公告欄都很安全，但如果<strong>分店檢查得太隨便</strong>，騙子還是有機可乘。</p>
+    <p>每一招，都有一間「笨分店」和一間「聰明分店」。看看差在哪裡。</p>
+  </section>
+
+  <section class="step">
+    <h2>第一招：「這張不用蓋章」</h2>
+    <p>騙子把抬頭的蓋章方式改成 <strong>none</strong>（不蓋章），內容改成管理員，第三段乾脆留空。</p>
+    <div class="sim">
+      <div class="actions"><button class="btn primary" id="l16-a1">送去兩間分店</button></div>
+      <p class="jwt colored" id="l16-t1"></p>
+      <div class="duo-verdict" id="l16-v1"></div>
+    </div>
+    <p>笨分店<strong>照著通行證自己寫的方式</strong>檢查，被牽著鼻子走。聰明分店只接受事先講好的蓋章方式。</p>
+  </section>
+
+  <section class="step">
+    <h2>第二招：拿別間分店的通行證</h2>
+    <p>騙子手上有一張<strong>真的</strong>通行證，但它是給相簿分店用的。他拿去記帳分店試試看：</p>
+    <div class="sim">
+      <div class="actions"><button class="btn primary" id="l16-a2">送去兩間記帳分店</button></div>
+      <div class="duo-verdict" id="l16-v2"></div>
+    </div>
+    <p>章是真的，但通行證上寫著「給相簿用」。只看章不看收件人，就會收下不屬於自己的通行證。</p>
+  </section>
+
+  <section class="step">
+    <h2>第三招：過期的通行證</h2>
+    <p>騙子撿到一張半小時前就過期的通行證，章也是真的：</p>
+    <div class="sim">
+      <div class="actions"><button class="btn primary" id="l16-a3">送去兩間分店</button></div>
+      <div class="duo-verdict" id="l16-v3"></div>
+    </div>
+    <p>檢查時間時，聰明分店會留一點點寬限（例如 30 秒），因為每台電腦的時鐘多少有誤差，但不會寬限到半小時。</p>
+  </section>
+
+  <section class="step">
+    <h2>聰明分店的檢查清單</h2>
+    <p>把三招的教訓整理起來，一間聰明分店收到通行證時，會檢查這些：</p>
+    <ul class="checklist">
+      <li class="ok">蓋章方式是事先講好的那一種，不聽通行證自己說</li>
+      <li class="ok">用公告欄上、編號對得上的印鑑證明，比對第三段的章</li>
+      <li class="ok">發證的是自己認識的總部（iss）</li>
+      <li class="ok">收件人是自己這間分店（aud）</li>
+      <li class="ok">還沒過期（exp），只留一點點時鐘寬限</li>
+    </ul>
+    <div class="real">
+      <p class="label">真實世界</p>
+      <p>寫成程式，大概就是這幾行（用的是 jose 這個工具）：</p>
+      <pre class="code">const JWKS = createRemoteJWKSet(new URL(
+  'https://auth.example.com/.well-known/jwks.json'));
+
+const { payload } = await jwtVerify(token, JWKS, {
+  algorithms: ['EdDSA'],
+  issuer: 'https://auth.example.com',
+  audience: 'ledger',
+  clockTolerance: 30,
+});</pre>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>你走完整條街了</h2>
+    <p>回頭看看這一路：</p>
+    <p>網站很健忘，所以要給你<strong>通行證</strong>。通行證分成<strong>三段</strong>，內容誰都能讀，所以要<strong>蓋章</strong>防偷改。章用<strong>私鑰</strong>蓋、用<strong>公鑰</strong>比對，公鑰貼在<strong>公告欄</strong>上讓分店自己抄。印章可以照順序<strong>換</strong>，通行證要<strong>短效</strong>，分店要<strong>仔細檢查</strong>。</p>
+    <p>這整套，就叫做 <strong>JWKS 模式</strong>。</p>
+  </section>
+
+  <section class="step">
+    <h2>這一課學到的</h2>
+    <p>騙子最常鑽的三個洞：<strong>相信通行證自己說的蓋章方式、不檢查收件人、不檢查到期時間</strong>。把清單上的每一項都檢查到，就能全部擋下。</p>
+    <p>恭喜你，<span data-name>小明</span>，整條闖關街都走完了！</p>
+
+    <div class="finish">
+      <span class="slot"></span>
+      <button class="btn primary" data-complete>我學會了，蓋章</button>
+    </div>
+    <div class="after-complete" hidden>
+      <p>全部 16 課都完成了！回首頁看看你蒐集的整張集章卡吧。</p>
+      <div class="actions">
+        <a class="btn primary" href="index.html">回課程首頁</a>
+      </div>
+    </div>
+  </section>
+
+  <nav class="stepnav" aria-label="步驟">
+    <button class="btn" data-prev>上一步</button>
+    <button class="btn primary" data-next>下一步</button>
+  </nav>
+</main>
+
+<script src="course.js"></script>
+<script>
+  (() => {
+
+    const enc = new TextEncoder();
+    const $ = (id) => document.getElementById(id);
+    const b64uBytes = (buf) => { let bin = ''; new Uint8Array(buf).forEach((b) => { bin += String.fromCharCode(b); }); return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+    const b64u = (str) => b64uBytes(enc.encode(str));
+    const unb64u = (s) => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); };
+    const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    const hasCrypto = !!(window.crypto && crypto.subtle);
+    const sha256 = async (s) => hex(await crypto.subtle.digest('SHA-256', enc.encode(s)));
+    const hmac = async (secret, msg) => {
+      const k = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+      return b64uBytes(await crypto.subtle.sign('HMAC', k, enc.encode(msg)));
+    };
+    const IAT = 1791856800, EXP = 1791857700;
+    const payload = (extra) => Object.assign({ iss: 'https://auth.example.com', sub: window.jwksName(), aud: 'ledger', role: 'member', iat: IAT, exp: EXP }, extra || {});
+    const makeKeys = async () => {
+      try {
+        const k = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+        return { publicKey: k.publicKey, privateKey: k.privateKey, alg: 'EdDSA', algo: { name: 'Ed25519' } };
+      } catch (e) {
+        const k = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+        return { publicKey: k.publicKey, privateKey: k.privateKey, alg: 'ES256', algo: { name: 'ECDSA', hash: 'SHA-256' } };
+      }
+    };
+    const signJWT = async (keys, kid, body) => {
+      const h = b64u(JSON.stringify({ alg: keys.alg, typ: 'JWT', kid }));
+      const p = b64u(JSON.stringify(body));
+      const sig = await crypto.subtle.sign(keys.algo, keys.privateKey, enc.encode(h + '.' + p));
+      return { h, p, s: b64uBytes(sig) };
+    };
+    const verifyJWT = async (keys, t) => {
+      try { return await crypto.subtle.verify(keys.algo, keys.publicKey, unb64u(t.s), enc.encode(t.h + '.' + t.p)); }
+      catch (e) { return false; }
+    };
+    const tokenHTML = (t, mark) => `<span class="seg h${mark === 'h' ? ' changed' : ''}">${t.h}</span><span class="pt">.</span><span class="seg p${mark === 'p' ? ' changed' : ''}">${t.p}</span><span class="pt">.</span><span class="seg s${mark === 's' ? ' changed' : ''}">${t.s}</span>`;
+    const pill = (ok, yes, no) => ok ? `<span class="pill ok">${yes}</span>` : `<span class="pill bad">${no}</span>`;
+    const short = (s, n = 18) => s.length > n ? s.slice(0, n) + '…' : s;
+    const onName = (fn) => document.addEventListener('jwks:name', fn);
+    const noCrypto = (el) => { el.innerHTML = '這台裝置的瀏覽器不支援密碼學功能，換一個新一點的瀏覽器就能試了。'; };
+    const unText = (s) => new TextDecoder().decode(unb64u(s));
+    const readJSON = (s) => { try { return JSON.parse(unText(s)); } catch (e) { return {}; } };
+    const exportPub = async (keys, kid) => Object.assign({ kid, use: 'sig', alg: keys.alg }, await crypto.subtle.exportKey('jwk', keys.publicKey));
+    const fmtTime = (sec) => new Date(sec * 1000).toLocaleTimeString('zh-TW', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hour12: false });
+
+    let hq = null;
+    const NOW_LATE = EXP + 30 * 60;   // 第三招：半小時後
+    // 笨分店：照通行證自己說的方式檢查，而且只看章
+    const dumb = async (t) => {
+      const head = readJSON(t.h);
+      if (head.alg === 'none') return [true, [[false, '通行證說「不用蓋章」，就真的沒檢查章']]];
+      const ok = await verifyJWT(hq, t);
+      return [ok, [[ok, ok ? '章對得上' : '章對不上'], [false, '沒檢查收件人'], [false, '沒檢查到期時間']]];
+    };
+    const smart = async (t, now) => {
+      const head = readJSON(t.h), body = readJSON(t.p), out = [];
+      const algOk = head.alg === hq.alg;
+      out.push([algOk, `蓋章方式要是講好的 ${hq.alg}（這張寫的是 ${head.alg}）`]);
+      if (!algOk) return [false, out];
+      const sigOk = await verifyJWT(hq, t); out.push([sigOk, '用公告欄的印鑑證明比對章']);
+      if (!sigOk) return [false, out];
+      const audOk = body.aud === 'ledger'; out.push([audOk, `收件人要是記帳分店 ledger（這張寫的是 ${body.aud}）`]);
+      if (!audOk) return [false, out];
+      const expOk = now < body.exp + 30; out.push([expOk, `還沒過期（現在 ${fmtTime(now)}，到期 ${fmtTime(body.exp)}）`]);
+      return [expOk, out];
+    };
+    const render = (id, d, s) => {
+      const list = (items) => `<ul class="checklist">${items.map(([ok, text]) => `<li class="${ok ? 'ok' : 'bad'}">${text}</li>`).join('')}</ul>`;
+      $(id).innerHTML =
+        `<div class="verdict"><b>笨分店</b>${pill(!d[0], '擋下', '被騙了')}${list(d[1])}</div>` +
+        `<div class="verdict"><b>聰明分店</b>${pill(!s[0], '擋下', '被騙了')}${list(s[1])}</div>`;
+    };
+    const ready = async () => { if (!hasCrypto) return false; hq = hq || await makeKeys(); return true; };
+    $('l16-a1').addEventListener('click', async () => {
+      if (!await ready()) return noCrypto($('l16-v1'));
+      const t = { h: b64u(JSON.stringify({ alg: 'none', typ: 'JWT' })), p: b64u(JSON.stringify(payload({ role: 'admin' }))), s: '' };
+      $('l16-t1').innerHTML = tokenHTML(t, 'h');
+      render('l16-v1', await dumb(t), await smart(t, IAT + 300));
+    });
+    $('l16-a2').addEventListener('click', async () => {
+      if (!await ready()) return noCrypto($('l16-v2'));
+      const t = await signJWT(hq, 'hq-2026-10', payload({ aud: 'photos' }));
+      render('l16-v2', await dumb(t), await smart(t, IAT + 300));
+    });
+    $('l16-a3').addEventListener('click', async () => {
+      if (!await ready()) return noCrypto($('l16-v3'));
+      const t = await signJWT(hq, 'hq-2026-10', payload());
+      render('l16-v3', await dumb(t), await smart(t, NOW_LATE));
+    });
+
+  })();
+</script>
+</body>
+</html>

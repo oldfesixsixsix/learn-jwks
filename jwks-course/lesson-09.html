@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>第 9 課　共用一顆印章的問題｜JWKS 小學堂</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔏</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@900&family=Permanent+Marker&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <!-- 潦草線：大幅抖動＋炭筆顆粒，用在框線與色塊 -->
+  <filter id="scrawl" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="3" seed="5" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="6" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="9" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.4 0 0 0 2.2" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 油蠟筆：更粗的顆粒，紙紋會從色塊裡透出來 -->
+  <filter id="crayon" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="2" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="4" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="2" seed="12" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3.2 0 0 0 2.55" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 麥克筆字：只抖動、不加顆粒，標題用 -->
+  <filter id="marker" x="-4%" y="-10%" width="108%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+<header class="topbar">
+  <a class="badge" href="index.html" aria-label="回課程首頁">首頁</a>
+  <span class="by"><i>By</i> 小學堂</span>
+  <span class="micro" aria-hidden="true">A BEGINNER'S GUIDE TO SIGNED TOKENS, PUBLIC KEYS AND THE JWKS ENDPOINT. ONE STEP AT A TIME.</span>
+  <span class="where">第 9 課 <i>of</i> 16</span>
+</header>
+
+<main class="wrap" data-lesson="09">
+  <div class="progress"><div class="dots" aria-hidden="true"></div><span class="progress-text"></span></div>
+
+  <section class="step">
+    <h1 class="ransom">共用一顆印章的問題</h1>
+    <p class="lead">上一課說：指紋誰都能算，壞人改完內容可以重算一個。那如果加一個<strong>只有自己人知道的秘密</strong>呢？</p>
+  </section>
+
+  <section class="step">
+    <h2>加了秘方的指紋</h2>
+    <p>總部和分店私下約好一句暗號，例如「芝麻開門」。計算指紋時，<strong>把暗號一起丟進去</strong>。</p>
+    <p>壞人不知道暗號，就算改了內容，也算不出正確的指紋。分店只要用同一句暗號重算一次，就知道是不是自己人做的。</p>
+    <div class="real">
+      <p class="label">真實世界</p>
+      <p>這種「加了秘密的指紋」叫做 <dfn class="term">HMAC</dfn>。用它來蓋章的 JWT，抬頭裡的 alg 會寫 <dfn class="term">HS256</dfn>。暗號就叫做<dfn class="term">共享秘密<small>shared secret</small></dfn>。</p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>試試看：暗號章</h2>
+    <p>總部用暗號「芝麻開門」幫你的通行證蓋了章。壞人想把身分改成管理員：</p>
+    <div class="sim">
+      <div class="io">
+        <label for="l9-guess">壞人猜的暗號</label>
+        <input type="text" id="l9-guess" value="1234" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="actions"><button class="btn primary" id="l9-forge">壞人改成管理員，自己蓋章</button></div>
+      <p class="feedback" id="l9-forge-msg" aria-live="polite"></p>
+    </div>
+    <p>試試把暗號改成「芝麻開門」再按一次。猜中暗號，就騙得過去。</p>
+  </section>
+
+  <section class="step">
+    <h2>麻煩在後面：每間分店都要知道暗號</h2>
+    <p>暗號章有一個大問題：分店要檢查，就得<strong>自己也知道暗號</strong>。服務越多，暗號就散落在越多地方。</p>
+    <div class="sim">
+      <div class="branches" id="l9-branches"></div>
+      <div class="actions"><button class="btn" id="l9-hack">相簿分店被駭了</button><button class="btn btn-ghost" id="l9-reset">還原</button></div>
+      <p class="feedback" id="l9-hack-msg" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>就像共用一顆印章</h2>
+    <p>暗號章，等於總部刻了好幾顆<strong>一模一樣的印章</strong>，每間分店發一顆。分店拿它來比對，但它同時也能蓋章。</p>
+    <p>只要其中一間分店把印章弄丟，壞人就能拿著它，<strong>在每一間分店都暢行無阻</strong>。分店越多，弄丟的機會就越大。</p>
+    <p>我們真正需要的是：一種分店拿來<strong>只能檢查、不能蓋章</strong>的東西。</p>
+  </section>
+
+  <section class="step">
+    <h2>這一課學到的</h2>
+    <p>在指紋裡加一句只有自己人知道的暗號（HMAC），壞人就算不出正確的章。</p>
+    <p>但每間分店都要知道暗號才能檢查，等於大家共用一顆印章：<strong>一間被駭，全部淪陷</strong>。</p>
+    <p>下一課，終於要介紹解決這個問題的主角：印章和印鑑證明。</p>
+
+    <div class="finish">
+      <span class="slot"></span>
+      <button class="btn primary" data-complete>我學會了，蓋章</button>
+    </div>
+    <div class="after-complete" hidden>
+      <p>蓋好了，這個章會留在首頁的集章卡上。</p>
+      <div class="actions">
+        <a class="btn primary" href="lesson-10.html">前往第 10 課</a>
+        <a class="btn" href="index.html">回課程首頁</a>
+      </div>
+    </div>
+  </section>
+
+  <nav class="stepnav" aria-label="步驟">
+    <button class="btn" data-prev>上一步</button>
+    <button class="btn primary" data-next>下一步</button>
+  </nav>
+</main>
+
+<script src="course.js"></script>
+<script>
+  (() => {
+
+    const enc = new TextEncoder();
+    const $ = (id) => document.getElementById(id);
+    const b64uBytes = (buf) => { let bin = ''; new Uint8Array(buf).forEach((b) => { bin += String.fromCharCode(b); }); return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+    const b64u = (str) => b64uBytes(enc.encode(str));
+    const unb64u = (s) => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); };
+    const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    const hasCrypto = !!(window.crypto && crypto.subtle);
+    const sha256 = async (s) => hex(await crypto.subtle.digest('SHA-256', enc.encode(s)));
+    const hmac = async (secret, msg) => {
+      const k = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+      return b64uBytes(await crypto.subtle.sign('HMAC', k, enc.encode(msg)));
+    };
+    const IAT = 1791856800, EXP = 1791857700;
+    const payload = (extra) => Object.assign({ iss: 'https://auth.example.com', sub: window.jwksName(), aud: 'ledger', role: 'member', iat: IAT, exp: EXP }, extra || {});
+    const makeKeys = async () => {
+      try {
+        const k = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+        return { publicKey: k.publicKey, privateKey: k.privateKey, alg: 'EdDSA', algo: { name: 'Ed25519' } };
+      } catch (e) {
+        const k = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+        return { publicKey: k.publicKey, privateKey: k.privateKey, alg: 'ES256', algo: { name: 'ECDSA', hash: 'SHA-256' } };
+      }
+    };
+    const signJWT = async (keys, kid, body) => {
+      const h = b64u(JSON.stringify({ alg: keys.alg, typ: 'JWT', kid }));
+      const p = b64u(JSON.stringify(body));
+      const sig = await crypto.subtle.sign(keys.algo, keys.privateKey, enc.encode(h + '.' + p));
+      return { h, p, s: b64uBytes(sig) };
+    };
+    const verifyJWT = async (keys, t) => {
+      try { return await crypto.subtle.verify(keys.algo, keys.publicKey, unb64u(t.s), enc.encode(t.h + '.' + t.p)); }
+      catch (e) { return false; }
+    };
+    const tokenHTML = (t, mark) => `<span class="seg h${mark === 'h' ? ' changed' : ''}">${t.h}</span><span class="pt">.</span><span class="seg p${mark === 'p' ? ' changed' : ''}">${t.p}</span><span class="pt">.</span><span class="seg s${mark === 's' ? ' changed' : ''}">${t.s}</span>`;
+    const pill = (ok, yes, no) => ok ? `<span class="pill ok">${yes}</span>` : `<span class="pill bad">${no}</span>`;
+    const short = (s, n = 18) => s.length > n ? s.slice(0, n) + '…' : s;
+    const onName = (fn) => document.addEventListener('jwks:name', fn);
+    const noCrypto = (el) => { el.innerHTML = '這台裝置的瀏覽器不支援密碼學功能，換一個新一點的瀏覽器就能試了。'; };
+
+    const SECRET = '芝麻開門';
+    $('l9-forge').addEventListener('click', async () => {
+      const msg = $('l9-forge-msg');
+      if (!hasCrypto) return noCrypto(msg);
+      const h = b64u(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+      const p = b64u(JSON.stringify(payload({ role: 'admin' })));
+      const guess = $('l9-guess').value;
+      const forged = await hmac(guess, h + '.' + p);
+      const check = await hmac(SECRET, h + '.' + p);
+      msg.innerHTML = `壞人算出的章：<span class="fp">${short(forged, 16)}</span><br>分店用真暗號重算：<span class="fp">${short(check, 16)}</span><br>` +
+        (forged === check ? pill(false, '', '騙過了') + ' 暗號被猜中，管理員通行證被接受了！' : pill(true, '擋下來', '') + ' 暗號不對，章對不上。');
+    });
+    const NAMES = ['記帳', '相簿', '行事曆', '筆記', '音樂', '地圖'];
+    const draw = (hacked) => {
+      $('l9-branches').innerHTML = NAMES.map((n) =>
+        `<div class="branch${hacked ? ' bad' : ''}"><b>${n}分店</b>${hacked ? '假通行證被接受' : '手上有暗號：芝麻開門'}</div>`).join('');
+    };
+    draw(false);
+    $('l9-hack').addEventListener('click', () => {
+      draw(true);
+      $('l9-hack-msg').textContent = '壞人從相簿分店偷到暗號，馬上做出一張管理員通行證。結果不只相簿，每一間分店都接受了它。';
+    });
+    $('l9-reset').addEventListener('click', () => { draw(false); $('l9-hack-msg').textContent = ''; });
+
+  })();
+</script>
+</body>
+</html>

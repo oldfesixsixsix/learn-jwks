@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>第 3 課　一間總部、很多分店｜JWKS 小學堂</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔏</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@900&family=Permanent+Marker&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <!-- 潦草線：大幅抖動＋炭筆顆粒，用在框線與色塊 -->
+  <filter id="scrawl" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="3" seed="5" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="6" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="9" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.4 0 0 0 2.2" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 油蠟筆：更粗的顆粒，紙紋會從色塊裡透出來 -->
+  <filter id="crayon" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="2" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="4" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="2" seed="12" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3.2 0 0 0 2.55" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 麥克筆字：只抖動、不加顆粒，標題用 -->
+  <filter id="marker" x="-4%" y="-10%" width="108%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+<header class="topbar">
+  <a class="badge" href="index.html" aria-label="回課程首頁">首頁</a>
+  <span class="by"><i>By</i> 小學堂</span>
+  <span class="micro" aria-hidden="true">A BEGINNER'S GUIDE TO SIGNED TOKENS, PUBLIC KEYS AND THE JWKS ENDPOINT. ONE STEP AT A TIME.</span>
+  <span class="where">第 3 課 <i>of</i> 16</span>
+</header>
+
+<main class="wrap" data-lesson="03">
+  <div class="progress"><div class="dots" aria-hidden="true"></div><span class="progress-text"></span></div>
+
+  <section class="step">
+    <h1 class="ransom">一間總部、很多分店</h1>
+    <p class="lead">到目前為止，我們都假設網站只有一個櫃檯。但真實的服務，常常不只一個。</p>
+    <p>這一課會看到，服務一變多，「證明」的做法就會變得很關鍵。</p>
+  </section>
+
+  <section class="step">
+    <h2>服務變多了</h2>
+    <p>假設你做了一套服務：記帳、相簿、行事曆。每一個都是獨立的小網站，但你希望使用者<strong>只要登入一次，三個都能用</strong>。</p>
+    <p>這時候，負責登入的那一個就像<strong>總部</strong>，其他的就像<strong>分店</strong>。使用者在總部登入，然後到各間分店使用服務。</p>
+    <div class="real">
+      <p class="label">真實世界</p>
+      <p>這是很常見的架構：一個專門負責登入的<dfn class="term">驗證服務<small>auth server</small></dfn>，加上很多個各自獨立的<dfn class="term">下游服務<small>downstream services</small></dfn>。</p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>做法 A：分店每次都打電話問總部</h2>
+    <p>如果用號碼牌的做法，問題來了：你在總部拿到號碼牌，但號碼對應的資料<strong>存在總部</strong>，分店自己查不到。</p>
+    <p>所以客人每次到分店出示號碼牌，分店都只好打電話回總部問：「A27 是誰？」</p>
+    <p>分店少的時候還好。分店一多，總部的電話就響個不停。更慘的是，<strong>總部只要一停電，所有分店都沒辦法做生意</strong>。</p>
+  </section>
+
+  <section class="step">
+    <h2>做法 B：分店自己看通行證</h2>
+    <p>如果改用通行證，資料就寫在通行證上。分店看一眼就知道你是誰，完全不用打電話。</p>
+    <p>總部只有在你<strong>登入的那一刻</strong>忙一下，發完通行證之後就輕鬆了。</p>
+    <p>下一步，我們實際比較兩種做法。</p>
+  </section>
+
+  <section class="step">
+    <h2>試試看：總部撐得住嗎？</h2>
+    <p>先選做法 A，把分店數量拉高，再按「總部停電」。然後換成做法 B，再試一次。</p>
+    <div class="sim">
+      <div class="controls">
+        <div class="seg" role="radiogroup" aria-label="做法">
+          <label><input type="radio" name="mode" value="A" checked> 做法 A：打電話問總部</label>
+          <label><input type="radio" name="mode" value="B"> 做法 B：自己看通行證</label>
+        </div>
+        <div class="range-row">
+          <label for="count">分店數量</label>
+          <input type="range" id="count" min="1" max="8" value="3">
+          <output id="count-out" for="count">3 間</output>
+        </div>
+        <div><button class="btn btn-sm" id="power" aria-pressed="false">總部停電</button></div>
+      </div>
+
+      <div class="hq" id="hq">
+        <div class="hq-name">總部</div>
+        <div class="meter" id="meter"><span></span></div>
+        <div class="hq-text" id="hq-text" aria-live="polite"></div>
+      </div>
+      <div class="branches" id="branches" aria-live="polite"></div>
+    </div>
+    <p class="note">假設每間分店每分鐘有 60 位客人。做法 B 停電時，已經拿到通行證的人照樣能用；只有還沒登入的新客人，要等總部恢復。</p>
+  </section>
+
+  <section class="step">
+    <h2>新問題：分店怎麼知道通行證是真的？</h2>
+    <p>做法 B 看起來很完美。但還記得上一課的問題嗎？通行證上的字如果能被亂改，分店看了也是白看。</p>
+    <p>更麻煩的是，分店也不能打電話問總部「這張是真的嗎？」，不然又回到做法 A 了。</p>
+    <p>所以我們需要的是：</p>
+    <p class="lead"><strong>一種讓分店自己就能檢查真假的方法，而且完全不用聯絡總部。</strong></p>
+    <p>這就是 JWKS 要解決的問題，也是接下來整套課的目標。</p>
+  </section>
+
+  <section class="step">
+    <h2>認識故事裡的角色</h2>
+    <p>接下來的課程，都會用這個故事來講。右邊的名字現在看不懂沒關係，左邊那欄你已經都懂了。</p>
+    <div class="table-scroll">
+      <table class="compare">
+        <thead><tr><th scope="col">故事裡</th><th scope="col">真實世界的名字</th><th scope="col">登場</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">總部</th><td>驗證服務（auth server）</td><td>這一課</td></tr>
+          <tr><th scope="row">分店</th><td>下游服務</td><td>這一課</td></tr>
+          <tr><th scope="row">通行證</th><td>token，通常是 JWT</td><td>第 4 課</td></tr>
+          <tr><th scope="row">總部的印章</th><td>私鑰（private key）</td><td>第 10 課</td></tr>
+          <tr><th scope="row">印鑑證明</th><td>公鑰（public key）</td><td>第 10 課</td></tr>
+          <tr><th scope="row">貼印鑑證明的公告欄</th><td>JWKS</td><td>第 13 課</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>先偷偷預告答案：總部在每張通行證上<strong>蓋自己的印章</strong>，分店則拿<strong>印鑑證明</strong>來比對。印章只有總部有，所以沒人偽造得了；印鑑證明誰都能看，所以分店不用打電話也能檢查。</p>
+  </section>
+
+  <section class="step">
+    <h2>這一課學到的</h2>
+    <p>服務一多，就會變成「一間總部、很多分店」。如果分店每次都打電話問總部，總部會很忙，而且一停電大家都完蛋。</p>
+    <p>改用通行證，分店就能自己判斷。但前提是：<strong>分店必須能自己確認通行證沒被偽造</strong>。</p>
+    <p>第一單元到這裡結束。第二單元，我們要把一張真的通行證拆開來看。</p>
+
+    <div class="finish">
+      <span class="slot"></span>
+      <button class="btn primary" data-complete>我學會了，蓋章</button>
+    </div>
+    <div class="after-complete" hidden>
+      <p>單元一完成！接下來進入第二單元：把一張真的通行證拆開來看。</p>
+      <div class="actions">
+        <a class="btn primary" href="lesson-04.html">前往第 4 課</a>
+        <a class="btn" href="index.html">回課程首頁</a>
+      </div>
+    </div>
+  </section>
+
+  <nav class="stepnav" aria-label="步驟">
+    <button class="btn" data-prev>上一步</button>
+    <button class="btn primary" data-next>下一步</button>
+  </nav>
+</main>
+
+<script src="course.js"></script>
+<script>
+  (() => {
+    const NAMES = ['記帳', '相簿', '行事曆', '筆記', '音樂', '地圖', '購物', '健身'];
+    const PER_MIN = 60;      // 每間分店每分鐘客人數
+    const CAPACITY = 360;    // 總部每分鐘接得住的電話數，超過就算「快撐不住」
+
+    const count = document.getElementById('count');
+    const countOut = document.getElementById('count-out');
+    const power = document.getElementById('power');
+    const hq = document.getElementById('hq');
+    const meter = document.getElementById('meter');
+    const hqText = document.getElementById('hq-text');
+    const branches = document.getElementById('branches');
+    let down = false;
+
+    const mode = () => document.querySelector('input[name="mode"]:checked').value;
+
+    function render() {
+      const n = Number(count.value);
+      const m = mode();
+      countOut.textContent = n + ' 間';
+      power.textContent = down ? '總部恢復供電' : '總部停電';
+      power.setAttribute('aria-pressed', String(down));
+      hq.classList.toggle('down', down);
+
+      const calls = m === 'A' ? n * PER_MIN : 0;
+      const pct = down ? 0 : Math.min(100, calls / CAPACITY * 100);
+      meter.firstElementChild.style.width = pct + '%';
+      meter.classList.toggle('hot', calls > CAPACITY);
+
+      if (down) {
+        hqText.textContent = '停電中，電話打不通。';
+      } else if (m === 'A') {
+        hqText.textContent = '每分鐘要接 ' + calls + ' 通電話' +
+          (calls > CAPACITY ? '，快撐不住了！' : '。');
+      } else {
+        hqText.textContent = '分店都不用打電話來。總部只在有人登入時才忙。';
+      }
+
+      branches.innerHTML = '';
+      for (let i = 0; i < n; i++) {
+        const ok = !(down && m === 'A');
+        const div = document.createElement('div');
+        div.className = 'branch' + (ok ? '' : ' bad');
+        let status;
+        if (m === 'A') status = ok ? '打電話問總部，確認身分' : '打不通總部，沒辦法確認身分';
+        else status = '自己看通行證，照常營業';
+        div.innerHTML = '<b>' + NAMES[i] + '分店</b>' + status;
+        branches.appendChild(div);
+      }
+    }
+
+    count.addEventListener('input', render);
+    document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener('change', render));
+    power.addEventListener('click', () => { down = !down; render(); });
+    render();
+  })();
+</script>
+</body>
+</html>

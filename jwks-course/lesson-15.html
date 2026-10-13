@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>第 15 課　收不回來的通行證｜JWKS 小學堂</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔏</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@900&family=Permanent+Marker&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <!-- 潦草線：大幅抖動＋炭筆顆粒，用在框線與色塊 -->
+  <filter id="scrawl" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="3" seed="5" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="6" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="9" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.4 0 0 0 2.2" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 油蠟筆：更粗的顆粒，紙紋會從色塊裡透出來 -->
+  <filter id="crayon" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="2" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="4" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="2" seed="12" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3.2 0 0 0 2.55" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 麥克筆字：只抖動、不加顆粒，標題用 -->
+  <filter id="marker" x="-4%" y="-10%" width="108%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+<header class="topbar">
+  <a class="badge" href="index.html" aria-label="回課程首頁">首頁</a>
+  <span class="by"><i>By</i> 小學堂</span>
+  <span class="micro" aria-hidden="true">A BEGINNER'S GUIDE TO SIGNED TOKENS, PUBLIC KEYS AND THE JWKS ENDPOINT. ONE STEP AT A TIME.</span>
+  <span class="where">第 15 課 <i>of</i> 16</span>
+</header>
+
+<main class="wrap" data-lesson="15">
+  <div class="progress"><div class="dots" aria-hidden="true"></div><span class="progress-text"></span></div>
+
+  <section class="step">
+    <h1 class="ransom">收不回來的通行證</h1>
+    <p class="lead">有人離職了、帳號被盜了，總部想讓他的通行證<strong>立刻失效</strong>。</p>
+    <p>這是通行證做法最大的弱點。這一課要誠實地面對它。</p>
+  </section>
+
+  <section class="step">
+    <h2>分店不問總部，就不知道</h2>
+    <p>通行證的好處，是分店自己就能檢查、不用打電話問總部。</p>
+    <p>但反過來說，總部在後台把某人停權了，<strong>分店根本不會知道</strong>。只要通行證的章是真的、也還沒過期，分店就會放行。</p>
+    <p>通行證發出去，就像潑出去的水，收不回來，只能等它自己過期。</p>
+  </section>
+
+  <section class="step">
+    <h2>試試看：有效期限要多長？</h2>
+    <p>拉一拉通行證的有效期限，看看停權之後，壞人還能用多久：</p>
+    <div class="sim">
+      <div class="range-row">
+        <label for="l15-ttl">通行證有效期限</label>
+        <input type="range" id="l15-ttl" min="0" max="5" step="1" value="2">
+        <output id="l15-ttl-out" for="l15-ttl"></output>
+      </div>
+      <dl class="kv">
+        <dt>停權後最多還能用</dt><dd id="l15-risk"></dd>
+        <dt>每人每天要回總部換新</dt><dd id="l15-cost"></dd>
+      </dl>
+      <p class="feedback" id="l15-say" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>常見的解法：短效通行證＋續約</h2>
+    <p>總部發兩樣東西給你：一張<strong>很快就過期的通行證</strong>（例如 15 分鐘），和一張<strong>續約卡</strong>。</p>
+    <p>通行證過期時，瀏覽器會自動拿續約卡回總部換一張新的。總部在這個時候檢查：<strong>如果你被停權了，就不給換</strong>。</p>
+    <div class="sim">
+      <div class="actions"><button class="btn primary" id="l15-play">播放：停權的那一天</button></div>
+      <ol class="log-list" id="l15-log" aria-live="polite"></ol>
+    </div>
+    <div class="real">
+      <p class="label">真實世界</p>
+      <p>短效的通行證叫 <dfn class="term">access token</dfn>，續約卡叫 <dfn class="term">refresh token</dfn>。續約卡只會拿去總部用，分店看不到它。</p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>真的很重要的事，另外問總部</h2>
+    <p>轉帳、刪除帳號、修改密碼這種事，晚 15 分鐘停權都太久。</p>
+    <p>所以很多網站會在這些<strong>高風險的動作</strong>前，另外打一通電話回總部確認一次。大部分的請求照樣快速放行，只有關鍵的那幾個多花一點時間。</p>
+  </section>
+
+  <section class="step">
+    <h2>這一課學到的</h2>
+    <p>通行證發出去就收不回來，分店不會知道有人被停權。所以要靠<strong>短的有效期限</strong>，加上<strong>回總部續約時把關</strong>。</p>
+    <p>期限越短越安全，但回總部的次數越多；高風險的動作，就另外問總部一次。</p>
+
+    <div class="finish">
+      <span class="slot"></span>
+      <button class="btn primary" data-complete>我學會了，蓋章</button>
+    </div>
+    <div class="after-complete" hidden>
+      <p>蓋好了，這個章會留在首頁的集章卡上。</p>
+      <div class="actions">
+        <a class="btn primary" href="lesson-16.html">前往第 16 課</a>
+        <a class="btn" href="index.html">回課程首頁</a>
+      </div>
+    </div>
+  </section>
+
+  <nav class="stepnav" aria-label="步驟">
+    <button class="btn" data-prev>上一步</button>
+    <button class="btn primary" data-next>下一步</button>
+  </nav>
+</main>
+
+<script src="course.js"></script>
+<script>
+  (() => {
+
+    const enc = new TextEncoder();
+    const $ = (id) => document.getElementById(id);
+    const b64uBytes = (buf) => { let bin = ''; new Uint8Array(buf).forEach((b) => { bin += String.fromCharCode(b); }); return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+    const b64u = (str) => b64uBytes(enc.encode(str));
+    const unb64u = (s) => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); };
+    const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    const hasCrypto = !!(window.crypto && crypto.subtle);
+    const sha256 = async (s) => hex(await crypto.subtle.digest('SHA-256', enc.encode(s)));
+    const hmac = async (secret, msg) => {
+      const k = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+      return b64uBytes(await crypto.subtle.sign('HMAC', k, enc.encode(msg)));
+    };
+    const IAT = 1791856800, EXP = 1791857700;
+    const payload = (extra) => Object.assign({ iss: 'https://auth.example.com', sub: window.jwksName(), aud: 'ledger', role: 'member', iat: IAT, exp: EXP }, extra || {});
+    const makeKeys = async () => {
+      try {
+        const k = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+        return { publicKey: k.publicKey, privateKey: k.privateKey, alg: 'EdDSA', algo: { name: 'Ed25519' } };
+      } catch (e) {
+        const k = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+        return { publicKey: k.publicKey, privateKey: k.privateKey, alg: 'ES256', algo: { name: 'ECDSA', hash: 'SHA-256' } };
+      }
+    };
+    const signJWT = async (keys, kid, body) => {
+      const h = b64u(JSON.stringify({ alg: keys.alg, typ: 'JWT', kid }));
+      const p = b64u(JSON.stringify(body));
+      const sig = await crypto.subtle.sign(keys.algo, keys.privateKey, enc.encode(h + '.' + p));
+      return { h, p, s: b64uBytes(sig) };
+    };
+    const verifyJWT = async (keys, t) => {
+      try { return await crypto.subtle.verify(keys.algo, keys.publicKey, unb64u(t.s), enc.encode(t.h + '.' + t.p)); }
+      catch (e) { return false; }
+    };
+    const tokenHTML = (t, mark) => `<span class="seg h${mark === 'h' ? ' changed' : ''}">${t.h}</span><span class="pt">.</span><span class="seg p${mark === 'p' ? ' changed' : ''}">${t.p}</span><span class="pt">.</span><span class="seg s${mark === 's' ? ' changed' : ''}">${t.s}</span>`;
+    const pill = (ok, yes, no) => ok ? `<span class="pill ok">${yes}</span>` : `<span class="pill bad">${no}</span>`;
+    const short = (s, n = 18) => s.length > n ? s.slice(0, n) + '…' : s;
+    const onName = (fn) => document.addEventListener('jwks:name', fn);
+    const noCrypto = (el) => { el.innerHTML = '這台裝置的瀏覽器不支援密碼學功能，換一個新一點的瀏覽器就能試了。'; };
+    const unText = (s) => new TextDecoder().decode(unb64u(s));
+    const readJSON = (s) => { try { return JSON.parse(unText(s)); } catch (e) { return {}; } };
+    const exportPub = async (keys, kid) => Object.assign({ kid, use: 'sig', alg: keys.alg }, await crypto.subtle.exportKey('jwk', keys.publicKey));
+    const fmtTime = (sec) => new Date(sec * 1000).toLocaleTimeString('zh-TW', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hour12: false });
+
+    const TTLS = [5, 15, 60, 240, 1440, 10080];
+    const label = (m) => m < 60 ? `${m} 分鐘` : m < 1440 ? `${m / 60} 小時` : `${m / 1440} 天`;
+    const ttl = $('l15-ttl');
+    const upd = () => {
+      const m = TTLS[Number(ttl.value)];
+      $('l15-ttl-out').textContent = label(m);
+      $('l15-risk').textContent = label(m);
+      $('l15-cost').textContent = `大約 ${Math.max(1, Math.round(16 * 60 / m))} 次（以一天用 16 小時算）`;
+      $('l15-say').textContent = m <= 15 ? '很多網站選在這附近：被盜的通行證很快就沒用了，回總部換新的次數也還能接受。'
+        : m <= 240 ? '回總部的次數少了，但停權後的空窗期也變長了。'
+        : '幾乎不用回總部，但通行證被偷的話，壞人可以用上好幾天。';
+    };
+    ttl.addEventListener('input', upd); upd();
+    $('l15-play').addEventListener('click', () => {
+      const n = window.jwksName();
+      const lines = [
+        ['ok', `10:00　${n} 登入，拿到 15 分鐘的通行證和一張續約卡`],
+        ['ok', `10:05　${n} 在記帳分店記帳，分店自己檢查通行證：放行`],
+        ['bad', `10:07　總部發現 ${n} 的帳號被盜，在後台停權`],
+        ['ok', '10:10　壞人拿著通行證去記帳分店：章是真的、還沒過期，分店放行（這就是空窗期）'],
+        ['bad', '10:15　通行證過期了，壞人拿續約卡回總部換新：總部發現已停權，拒絕！'],
+        ['ok', '10:16　壞人手上只剩一張過期的通行證，每一間分店都不收了']
+      ];
+      const log = $('l15-log'); log.innerHTML = '';
+      lines.forEach(([cls, text], i) => setTimeout(() => { const li = document.createElement('li'); li.className = cls; li.textContent = text; log.appendChild(li); }, i * 450));
+    });
+
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>第 12 課　偷改通行證｜JWKS 小學堂</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔏</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@900&family=Permanent+Marker&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <!-- 潦草線：大幅抖動＋炭筆顆粒，用在框線與色塊 -->
+  <filter id="scrawl" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="3" seed="5" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="6" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="9" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.4 0 0 0 2.2" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 油蠟筆：更粗的顆粒，紙紋會從色塊裡透出來 -->
+  <filter id="crayon" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="2" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="4" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="2" seed="12" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3.2 0 0 0 2.55" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 麥克筆字：只抖動、不加顆粒，標題用 -->
+  <filter id="marker" x="-4%" y="-10%" width="108%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+<header class="topbar">
+  <a class="badge" href="index.html" aria-label="回課程首頁">首頁</a>
+  <span class="by"><i>By</i> 小學堂</span>
+  <span class="micro" aria-hidden="true">A BEGINNER'S GUIDE TO SIGNED TOKENS, PUBLIC KEYS AND THE JWKS ENDPOINT. ONE STEP AT A TIME.</span>
+  <span class="where">第 12 課 <i>of</i> 16</span>
+</header>
+
+<main class="wrap" data-lesson="12">
+  <div class="progress"><div class="dots" aria-hidden="true"></div><span class="progress-text"></span></div>
+
+  <section class="step">
+    <h1 class="ransom">偷改通行證</h1>
+    <p class="lead">第 2 課的問題，終於可以完整回答了：通行證寫在你手上，你能不能自己改？</p>
+    <p>這一課，總部已經用真的印章幫 <span data-name>小明</span> 蓋好了一張通行證。你要當壞人，用盡辦法騙過分店。</p>
+  </section>
+
+  <section class="step">
+    <h2>總部發的通行證</h2>
+    <div class="sim">
+      <p class="jwt colored" id="l12-orig">總部蓋章中……</p>
+      <p class="feedback" id="l12-orig-msg" aria-live="polite"></p>
+    </div>
+    <p>分店手上只有總部的公鑰。接下來每一招，都會交給分店用公鑰比對。</p>
+  </section>
+
+  <section class="step">
+    <h2>第一招：只改內容</h2>
+    <p>把身分改成管理員，重新轉換第二段，章不動：</p>
+    <div class="sim">
+      <div class="actions"><button class="btn primary" id="l12-a1">改成管理員</button></div>
+      <p class="jwt colored" id="l12-t1"></p>
+      <p class="feedback" id="l12-m1" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>第二招：自己刻一顆章</h2>
+    <p>既然章對不上，壞人乾脆自己做一對金鑰，用自己的印章重新蓋：</p>
+    <div class="sim">
+      <div class="actions"><button class="btn primary" id="l12-a2">用壞人的印章蓋</button></div>
+      <p class="jwt colored" id="l12-t2"></p>
+      <p class="feedback" id="l12-m2" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>第三招：剪貼別人的章</h2>
+    <p>總部幫另一個人（管理員）也蓋過通行證。壞人把那張的章剪下來，貼到自己改過的內容上：</p>
+    <div class="sim">
+      <div class="actions"><button class="btn primary" id="l12-a3">剪下管理員的章貼上</button></div>
+      <p class="jwt colored" id="l12-t3"></p>
+      <p class="feedback" id="l12-m3" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>唯一騙得過的方法</h2>
+    <p>三招都失敗了。唯一能讓分店點頭的，是<strong>用總部的私鑰蓋章</strong>。</p>
+    <p>所以整套系統的安全，最後都落在一件事上：<strong>總部的私鑰要藏好</strong>。公鑰則可以大方地發給所有分店。</p>
+    <div class="real">
+      <p class="label">真實世界</p>
+      <p>總部發證時用私鑰對「第一段.第二段」簽章；分店收到後用公鑰驗證簽章。這個流程叫做<dfn class="term">數位簽章<small>digital signature</small></dfn>，JWT 的第三段就是它。</p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>這一課學到的</h2>
+    <p>只改內容、自己刻章、剪貼別人的章，<strong>全部都會被公鑰抓包</strong>。只有總部的私鑰蓋得出分店認得的章。</p>
+    <p>第三單元到這裡結束。最後一塊拼圖是：分店要去哪裡拿總部的公鑰？公鑰換了怎麼辦？這就是第四單元的「公告欄」：JWKS。</p>
+
+    <div class="finish">
+      <span class="slot"></span>
+      <button class="btn primary" data-complete>我學會了，蓋章</button>
+    </div>
+    <div class="after-complete" hidden>
+      <p>單元三完成！最後一個單元：真實世界的運作。</p>
+      <div class="actions">
+        <a class="btn primary" href="lesson-13.html">前往第 13 課</a>
+        <a class="btn" href="index.html">回課程首頁</a>
+      </div>
+    </div>
+  </section>
+
+  <nav class="stepnav" aria-label="步驟">
+    <button class="btn" data-prev>上一步</button>
+    <button class="btn primary" data-next>下一步</button>
+  </nav>
+</main>
+
+<script src="course.js"></script>
+<script>
+  (() => {
+
+    const enc = new TextEncoder();
+    const $ = (id) => document.getElementById(id);
+    const b64uBytes = (buf) => { let bin = ''; new Uint8Array(buf).forEach((b) => { bin += String.fromCharCode(b); }); return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+    const b64u = (str) => b64uBytes(enc.encode(str));
+    const unb64u = (s) => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); };
+    const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    const hasCrypto = !!(window.crypto && crypto.subtle);
+    const sha256 = async (s) => hex(await crypto.subtle.digest('SHA-256', enc.encode(s)));
+    const hmac = async (secret, msg) => {
+      const k = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+      return b64uBytes(await crypto.subtle.sign('HMAC', k, enc.encode(msg)));
+    };
+    const IAT = 1791856800, EXP = 1791857700;
+    const payload = (extra) => Object.assign({ iss: 'https://auth.example.com', sub: window.jwksName(), aud: 'ledger', role: 'member', iat: IAT, exp: EXP }, extra || {});
+    const makeKeys = async () => {
+      try {
+        const k = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+        return { publicKey: k.publicKey, privateKey: k.privateKey, alg: 'EdDSA', algo: { name: 'Ed25519' } };
+      } catch (e) {
+        const k = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+        return { publicKey: k.publicKey, privateKey: k.privateKey, alg: 'ES256', algo: { name: 'ECDSA', hash: 'SHA-256' } };
+      }
+    };
+    const signJWT = async (keys, kid, body) => {
+      const h = b64u(JSON.stringify({ alg: keys.alg, typ: 'JWT', kid }));
+      const p = b64u(JSON.stringify(body));
+      const sig = await crypto.subtle.sign(keys.algo, keys.privateKey, enc.encode(h + '.' + p));
+      return { h, p, s: b64uBytes(sig) };
+    };
+    const verifyJWT = async (keys, t) => {
+      try { return await crypto.subtle.verify(keys.algo, keys.publicKey, unb64u(t.s), enc.encode(t.h + '.' + t.p)); }
+      catch (e) { return false; }
+    };
+    const tokenHTML = (t, mark) => `<span class="seg h${mark === 'h' ? ' changed' : ''}">${t.h}</span><span class="pt">.</span><span class="seg p${mark === 'p' ? ' changed' : ''}">${t.p}</span><span class="pt">.</span><span class="seg s${mark === 's' ? ' changed' : ''}">${t.s}</span>`;
+    const pill = (ok, yes, no) => ok ? `<span class="pill ok">${yes}</span>` : `<span class="pill bad">${no}</span>`;
+    const short = (s, n = 18) => s.length > n ? s.slice(0, n) + '…' : s;
+    const onName = (fn) => document.addEventListener('jwks:name', fn);
+    const noCrypto = (el) => { el.innerHTML = '這台裝置的瀏覽器不支援密碼學功能，換一個新一點的瀏覽器就能試了。'; };
+
+    let hq = null, mine = null;
+    const init = async () => {
+      if (!hasCrypto) return noCrypto($('l12-orig'));
+      hq = hq || await makeKeys();
+      mine = await signJWT(hq, 'hq-key-1', payload());
+      $('l12-orig').innerHTML = tokenHTML(mine);
+      const ok = await verifyJWT(hq, mine);
+      $('l12-orig-msg').innerHTML = pill(ok, '對得上', '對不上') + ' 這是真的，分店放行。';
+      ['l12-t1', 'l12-t2', 'l12-t3', 'l12-m1', 'l12-m2', 'l12-m3'].forEach((id) => { $(id).textContent = ''; });
+    };
+    init(); onName(init);
+    const show = async (tid, mid, t, mark, why) => {
+      $(tid).innerHTML = tokenHTML(t, mark);
+      const ok = await verifyJWT(hq, t);
+      $(mid).innerHTML = pill(!ok, '抓到了', '騙過了') + ' ' + why;
+    };
+    $('l12-a1').addEventListener('click', () => {
+      if (!mine) return;
+      const t = { h: mine.h, p: b64u(JSON.stringify(payload({ role: 'admin' }))), s: mine.s };
+      show('l12-t1', 'l12-m1', t, 'p', '內容變了，原本的章是對著舊內容蓋的，比對不過。');
+    });
+    $('l12-a2').addEventListener('click', async () => {
+      if (!mine) return;
+      const bad = await makeKeys();
+      const t = await signJWT(bad, 'hq-key-1', payload({ role: 'admin' }));
+      show('l12-t2', 'l12-m2', t, 's', '章本身沒問題，但它是壞人的印章蓋的。總部的印鑑證明不認它。');
+    });
+    $('l12-a3').addEventListener('click', async () => {
+      if (!mine) return;
+      const admin = await signJWT(hq, 'hq-key-1', payload({ sub: 'admin', role: 'admin' }));
+      const t = { h: mine.h, p: b64u(JSON.stringify(payload({ role: 'admin' }))), s: admin.s };
+      show('l12-t3', 'l12-m3', t, 's', '章確實是總部蓋的，但它是蓋在「管理員那張」的內容上。內容和章對不起來，一樣被抓。');
+    });
+
+  })();
+</script>
+</body>
+</html>

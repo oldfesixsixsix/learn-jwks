@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>第 10 課　印章和印鑑證明｜JWKS 小學堂</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔏</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@900&family=Permanent+Marker&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <!-- 潦草線：大幅抖動＋炭筆顆粒，用在框線與色塊 -->
+  <filter id="scrawl" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="3" seed="5" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="6" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="9" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.4 0 0 0 2.2" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 油蠟筆：更粗的顆粒，紙紋會從色塊裡透出來 -->
+  <filter id="crayon" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="2" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="4" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="2" seed="12" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3.2 0 0 0 2.55" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 麥克筆字：只抖動、不加顆粒，標題用 -->
+  <filter id="marker" x="-4%" y="-10%" width="108%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+<header class="topbar">
+  <a class="badge" href="index.html" aria-label="回課程首頁">首頁</a>
+  <span class="by"><i>By</i> 小學堂</span>
+  <span class="micro" aria-hidden="true">A BEGINNER'S GUIDE TO SIGNED TOKENS, PUBLIC KEYS AND THE JWKS ENDPOINT. ONE STEP AT A TIME.</span>
+  <span class="where">第 10 課 <i>of</i> 16</span>
+</header>
+
+<main class="wrap" data-lesson="10">
+  <div class="progress"><div class="dots" aria-hidden="true"></div><span class="progress-text"></span></div>
+
+  <section class="step">
+    <h1 class="ransom">印章和印鑑證明</h1>
+    <p class="lead">在台灣辦重要的事，常會被要求附上「印鑑證明」。這一課的主角，就藏在這張紙裡。</p>
+  </section>
+
+  <section class="step">
+    <h2>一顆章，一張證明</h2>
+    <p><strong>印章</strong>只有你本人有，收在抽屜裡，蓋在重要文件上。</p>
+    <p><strong>印鑑證明</strong>是在戶政事務所登記的印章樣本。銀行、代書收到你蓋章的文件，拿印鑑證明來<strong>比對</strong>，就知道章是不是真的。</p>
+    <p>最重要的一點：<strong>拿著印鑑證明，蓋不出你的章。</strong>它只能用來比對。所以印鑑證明可以放心給別人。</p>
+  </section>
+
+  <section class="step">
+    <h2>放回我們的故事</h2>
+    <p>總部有一顆<strong>印章</strong>，鎖在總部裡，只用來幫通行證蓋章。</p>
+    <p>每間分店拿到的是<strong>印鑑證明</strong>。收到通行證時，用它比對章是不是總部蓋的。</p>
+    <p>分店不再握有能蓋章的東西了。</p>
+    <div class="real">
+      <p class="label">真實世界</p>
+      <p>印章叫做<dfn class="term">私鑰<small>private key</small></dfn>，印鑑證明叫做<dfn class="term">公鑰<small>public key</small></dfn>。兩者是一起產生的一對，叫<dfn class="term">金鑰對<small>key pair</small></dfn>。數學保證：<strong>從公鑰推不出私鑰</strong>。第 4 課看到的 alg「EdDSA」，就是其中一種做法。</p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>小測驗</h2>
+    <p>分店手上應該拿著什麼？</p>
+    <div class="quiz" id="l10-q1">
+      <button class="btn" data-a="priv">私鑰（印章）</button>
+      <button class="btn" data-a="pub">公鑰（印鑑證明）</button>
+      <button class="btn" data-a="both">兩個都要</button>
+    </div>
+    <p class="feedback" id="l10-q1-msg" aria-live="polite"></p>
+  </section>
+
+  <section class="step">
+    <h2>再駭一次分店看看</h2>
+    <p>跟上一課一樣，壞人駭進了相簿分店。但這次分店手上只有公鑰：</p>
+    <div class="sim">
+      <div class="branches" id="l10-branches"></div>
+      <div class="actions"><button class="btn" id="l10-hack">相簿分店被駭了</button><button class="btn btn-ghost" id="l10-reset">還原</button></div>
+      <p class="feedback" id="l10-hack-msg" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>兩種做法比一比</h2>
+    <div class="table-scroll">
+      <table class="compare">
+        <thead><tr><th scope="col"></th><th scope="col">暗號章（HS256）</th><th scope="col">印章＋印鑑證明（EdDSA 等）</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">總部手上</th><td>暗號</td><td>私鑰（印章）</td></tr>
+          <tr><th scope="row">分店手上</th><td>同一句暗號</td><td>公鑰（印鑑證明）</td></tr>
+          <tr><th scope="row">分店能蓋章嗎</th><td>能</td><td>不能，只能比對</td></tr>
+          <tr><th scope="row">一間分店被駭</th><td>所有分店都淪陷</td><td>壞人還是蓋不出章</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>這就是第 3 課說的：<strong>分店自己就能檢查真假，又不用聯絡總部</strong>。</p>
+  </section>
+
+  <section class="step">
+    <h2>這一課學到的</h2>
+    <p>總部用<strong>私鑰（印章）</strong>蓋章，分店用<strong>公鑰（印鑑證明）</strong>比對。公鑰只能比對、不能蓋章，所以可以放心發給每一間分店。</p>
+    <p>就算分店被駭，壞人拿到的也只是印鑑證明。下一課，我們在你的瀏覽器裡，真的做一顆印章來蓋。</p>
+
+    <div class="finish">
+      <span class="slot"></span>
+      <button class="btn primary" data-complete>我學會了，蓋章</button>
+    </div>
+    <div class="after-complete" hidden>
+      <p>蓋好了，這個章會留在首頁的集章卡上。</p>
+      <div class="actions">
+        <a class="btn primary" href="lesson-11.html">前往第 11 課</a>
+        <a class="btn" href="index.html">回課程首頁</a>
+      </div>
+    </div>
+  </section>
+
+  <nav class="stepnav" aria-label="步驟">
+    <button class="btn" data-prev>上一步</button>
+    <button class="btn primary" data-next>下一步</button>
+  </nav>
+</main>
+
+<script src="course.js"></script>
+<script>
+  (() => {
+
+    const enc = new TextEncoder();
+    const $ = (id) => document.getElementById(id);
+    const b64uBytes = (buf) => { let bin = ''; new Uint8Array(buf).forEach((b) => { bin += String.fromCharCode(b); }); return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+    const b64u = (str) => b64uBytes(enc.encode(str));
+    const unb64u = (s) => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); };
+    const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    const hasCrypto = !!(window.crypto && crypto.subtle);
+    const sha256 = async (s) => hex(await crypto.subtle.digest('SHA-256', enc.encode(s)));
+    const hmac = async (secret, msg) => {
+      const k = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+      return b64uBytes(await crypto.subtle.sign('HMAC', k, enc.encode(msg)));
+    };
+    const IAT = 1791856800, EXP = 1791857700;
+    const payload = (extra) => Object.assign({ iss: 'https://auth.example.com', sub: window.jwksName(), aud: 'ledger', role: 'member', iat: IAT, exp: EXP }, extra || {});
+    const makeKeys = async () => {
+      try {
+        const k = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+        return { publicKey: k.publicKey, privateKey: k.privateKey, alg: 'EdDSA', algo: { name: 'Ed25519' } };
+      } catch (e) {
+        const k = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+        return { publicKey: k.publicKey, privateKey: k.privateKey, alg: 'ES256', algo: { name: 'ECDSA', hash: 'SHA-256' } };
+      }
+    };
+    const signJWT = async (keys, kid, body) => {
+      const h = b64u(JSON.stringify({ alg: keys.alg, typ: 'JWT', kid }));
+      const p = b64u(JSON.stringify(body));
+      const sig = await crypto.subtle.sign(keys.algo, keys.privateKey, enc.encode(h + '.' + p));
+      return { h, p, s: b64uBytes(sig) };
+    };
+    const verifyJWT = async (keys, t) => {
+      try { return await crypto.subtle.verify(keys.algo, keys.publicKey, unb64u(t.s), enc.encode(t.h + '.' + t.p)); }
+      catch (e) { return false; }
+    };
+    const tokenHTML = (t, mark) => `<span class="seg h${mark === 'h' ? ' changed' : ''}">${t.h}</span><span class="pt">.</span><span class="seg p${mark === 'p' ? ' changed' : ''}">${t.p}</span><span class="pt">.</span><span class="seg s${mark === 's' ? ' changed' : ''}">${t.s}</span>`;
+    const pill = (ok, yes, no) => ok ? `<span class="pill ok">${yes}</span>` : `<span class="pill bad">${no}</span>`;
+    const short = (s, n = 18) => s.length > n ? s.slice(0, n) + '…' : s;
+    const onName = (fn) => document.addEventListener('jwks:name', fn);
+    const noCrypto = (el) => { el.innerHTML = '這台裝置的瀏覽器不支援密碼學功能，換一個新一點的瀏覽器就能試了。'; };
+
+    const replies = {
+      priv: '如果分店拿著私鑰，就等於拿著印章，被駭的話壞人就能蓋章了。再想想看？',
+      pub: '答對了！分店只需要能比對的印鑑證明，也就是公鑰。',
+      both: '分店不需要蓋章，只需要比對。多拿一顆印章，只是多一個被偷的風險。再想想看？'
+    };
+    $('l10-q1').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-a]'); if (!b) return;
+      $('l10-q1').querySelectorAll('.btn').forEach((x) => x.classList.remove('right', 'wrong'));
+      b.classList.add(b.dataset.a === 'pub' ? 'right' : 'wrong');
+      $('l10-q1-msg').textContent = replies[b.dataset.a];
+    });
+    const NAMES = ['記帳', '相簿', '行事曆', '筆記', '音樂', '地圖'];
+    const draw = (hacked) => {
+      $('l10-branches').innerHTML = NAMES.map((n) =>
+        `<div class="branch"><b>${n}分店</b>${hacked ? '假通行證被擋下' : '手上有：印鑑證明'}</div>`).join('');
+    };
+    draw(false);
+    $('l10-hack').addEventListener('click', () => {
+      draw(true);
+      $('l10-hack-msg').textContent = '壞人從相簿分店偷到的只有印鑑證明。他做了一張管理員通行證，但蓋不出總部的章，每一間分店都把它擋下來了。';
+    });
+    $('l10-reset').addEventListener('click', () => { draw(false); $('l10-hack-msg').textContent = ''; });
+
+  })();
+</script>
+</body>
+</html>

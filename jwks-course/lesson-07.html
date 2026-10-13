@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>第 7 課　那第三段呢？｜JWKS 小學堂</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔏</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@900&family=Permanent+Marker&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <!-- 潦草線：大幅抖動＋炭筆顆粒，用在框線與色塊 -->
+  <filter id="scrawl" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="3" seed="5" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="6" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="9" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.4 0 0 0 2.2" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 油蠟筆：更粗的顆粒，紙紋會從色塊裡透出來 -->
+  <filter id="crayon" x="-6%" y="-10%" width="112%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="2" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="4" xChannelSelector="R" yChannelSelector="G" result="wobble"/>
+    <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="2" seed="12" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3.2 0 0 0 2.55" result="grainMask"/>
+    <feComposite in="wobble" in2="grainMask" operator="in"/>
+  </filter>
+  <!-- 麥克筆字：只抖動、不加顆粒，標題用 -->
+  <filter id="marker" x="-4%" y="-10%" width="108%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+<header class="topbar">
+  <a class="badge" href="index.html" aria-label="回課程首頁">首頁</a>
+  <span class="by"><i>By</i> 小學堂</span>
+  <span class="micro" aria-hidden="true">A BEGINNER'S GUIDE TO SIGNED TOKENS, PUBLIC KEYS AND THE JWKS ENDPOINT. ONE STEP AT A TIME.</span>
+  <span class="where">第 7 課 <i>of</i> 16</span>
+</header>
+
+<main class="wrap" data-lesson="07">
+  <div class="progress"><div class="dots" aria-hidden="true"></div><span class="progress-text"></span></div>
+
+  <section class="step">
+    <h1 class="ransom">那第三段呢？</h1>
+    <p class="lead">前兩段，你已經會拆、也會做了。只剩下綠色的第三段：印章。</p>
+    <p>這一課要回答第 2 課留下的大問題：<strong>通行證寫在你手上，那為什麼你不能自己亂改？</strong></p>
+  </section>
+
+  <section class="step">
+    <h2>把第三段丟進轉換機</h2>
+    <p>前兩段解開都是看得懂的文字。第三段呢？</p>
+    <p class="jwt colored"><span class="seg s">AtYMpoawQJ0ax16ASnQ5UX5tGRS00klMRHex1-efRUzvDE2eSXX3uZnAnbFnr7xP6UsvLOi6XytkxASBbWPTyw</span></p>
+    <div class="actions"><button class="btn primary" id="l7-dec">解開看看</button></div>
+    <output class="out" id="l7-dec-out" aria-live="polite"></output>
+    <p class="feedback" id="l7-dec-msg"></p>
+  </section>
+
+  <section class="step">
+    <h2>試試看：偷改通行證</h2>
+    <p>我們來當一次壞人。把第二段的身分改掉，再重新轉換回去：</p>
+    <div class="sim">
+      <div class="io">
+        <label for="l7-role">把 role 改成</label>
+        <select id="l7-role"><option value="member">member 一般會員（原本的）</option><option value="admin">admin 管理員</option><option value="vip">vip 貴賓</option></select>
+      </div>
+      <p class="jwt colored" id="l7-forged"></p>
+      <p class="feedback" id="l7-forge-msg" aria-live="polite"></p>
+    </div>
+    <p>改了之後，<strong>只有第二段變了</strong>，第三段印章還是原本那一串。這就是破綻。</p>
+  </section>
+
+  <section class="step">
+    <h2>印章是「對著內容」蓋的</h2>
+    <p>公文上常看到「騎縫章」：印章蓋在兩張紙的接縫上，一半在這張、一半在那張。只要有人偷換其中一頁，章就對不起來了。</p>
+    <p>通行證的印章也是這樣。總部是<strong>根據前兩段的內容</strong>算出第三段的。內容一改，原本的印章就對不上了。</p>
+    <div class="real">
+      <p class="label">真實世界</p>
+      <p>第三段叫做 <dfn class="term">簽章<small>signature</small></dfn>。總部用一把只有它才有的鑰匙，對「第一段.第二段」這整串算出簽章。分店收到通行證時，重新檢查簽章和內容對不對得上。</p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>試試看：對照機</h2>
+    <p>我們先用一個簡化版來感受：每段內容都有一個獨一無二的「指紋」，內容差一個字，指紋就完全不同。</p>
+    <div class="sim">
+      <dl class="kv">
+        <dt>總部發證時記下的指紋</dt><dd class="fp" id="l7-fp-orig">計算中……</dd>
+        <dt>現在這張的指紋</dt><dd class="fp" id="l7-fp-now">計算中……</dd>
+      </dl>
+      <div class="io">
+        <label for="l7-role2">把 role 改成</label>
+        <select id="l7-role2"><option value="member">member 一般會員（原本的）</option><option value="admin">admin 管理員</option></select>
+      </div>
+      <p class="feedback" id="l7-check" aria-live="polite"></p>
+      <div class="actions"><button class="btn" id="l7-cheat">幫壞人重算一個新指紋</button></div>
+      <p class="feedback" id="l7-cheat-msg" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>光有指紋還不夠</h2>
+    <p>你剛剛發現了：如果第三段只是「指紋」，壞人改完內容，自己重算一個新指紋就好，分店根本分不出來。</p>
+    <p>所以真正的第三段，必須是<strong>只有總部才做得出來</strong>的東西。就像總部的印章，別人沒有那顆章，就蓋不出一樣的章。</p>
+    <p>指紋是什麼、印章怎麼做到只有總部能蓋、分店又怎麼不用打電話就能檢查，就是第三單元要講的。</p>
+  </section>
+
+  <section class="step">
+    <h2>這一課學到的</h2>
+    <p>第三段不是文字，是總部<strong>對著前兩段的內容</strong>算出來的簽章。</p>
+    <p>壞人如果偷改內容，簽章就對不上，分店就會發現。但前提是：簽章必須是<strong>只有總部才做得出來</strong>的。</p>
+    <p>第二單元到這裡結束。你已經能把一張真的通行證拆開、讀懂，也知道它怎麼防偷改了。</p>
+
+    <div class="finish">
+      <span class="slot"></span>
+      <button class="btn primary" data-complete>我學會了，蓋章</button>
+    </div>
+    <div class="after-complete" hidden>
+      <p>單元二完成！接下來進入第三單元：印章與印鑑證明。</p>
+      <div class="actions">
+        <a class="btn primary" href="lesson-08.html">前往第 8 課</a>
+        <a class="btn" href="index.html">回課程首頁</a>
+      </div>
+    </div>
+  </section>
+
+  <nav class="stepnav" aria-label="步驟">
+    <button class="btn" data-prev>上一步</button>
+    <button class="btn primary" data-next>下一步</button>
+  </nav>
+</main>
+
+<script src="course.js"></script>
+<script>
+  (() => {
+    const b64u = (str) => { const bytes = new TextEncoder().encode(str); let bin = ''; bytes.forEach((b) => { bin += String.fromCharCode(b); }); return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+    const unb64u = (s) => { s = s.trim().replace(/-/g, '+').replace(/_/g, '/'); if (/[^A-Za-z0-9+/]/.test(s)) throw new Error('bad'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); };
+    const asText = (bytes) => new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const IAT = 1791856800, EXP = 1791857700;
+    // 通行證內容：sub 用學習者自己的名字
+    const payload = (extra) => Object.assign({ iss: 'https://auth.example.com', sub: window.jwksName(), aud: 'ledger', role: 'member', iat: IAT, exp: EXP }, extra || {});
+    const P = () => b64u(JSON.stringify(payload()));
+    const onName = (fn) => document.addEventListener('jwks:name', fn);
+    const H = 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCIsImtpZCI6ImFiYzEyMyJ9', S = 'AtYMpoawQJ0ax16ASnQ5UX5tGRS00klMRHex1-efRUzvDE2eSXX3uZnAnbFnr7xP6UsvLOi6XytkxASBbWPTyw';
+    // 第三段：解出來不是文字
+    document.getElementById('l7-dec').addEventListener('click', () => {
+      const bytes = unb64u(S);
+      const o = document.getElementById('l7-dec-out');
+      let txt;
+      try { txt = asText(bytes); } catch (e) { txt = null; }
+      const hex = [...bytes.slice(0, 20)].map((b) => b.toString(16).padStart(2, '0')).join(' ');
+      o.textContent = txt === null ? `${hex} ……（共 ${bytes.length} 個數字）` : txt;
+      document.getElementById('l7-dec-msg').textContent = '解出來不是文字，而是一串數字。它不是給人讀的，是給分店拿來檢查用的。';
+    });
+    // 偷改：只有第二段會變
+    const forged = (role) => b64u(JSON.stringify(payload({ role })));
+    const showForge = () => {
+      const role = document.getElementById('l7-role').value;
+      const p = forged(role), changed = p !== P();
+      document.getElementById('l7-forged').innerHTML =
+        `<span class="seg h">${H}</span><span class="pt">.</span><span class="seg p${changed ? ' changed' : ''}">${p}</span><span class="pt">.</span><span class="seg s">${S}</span>`;
+      document.getElementById('l7-forge-msg').textContent = changed ? '第二段變了（紅框），第三段印章還是原本那一串。' : '這是原本的通行證。';
+    };
+    document.getElementById('l7-role').addEventListener('change', showForge); showForge();
+    // 對照機：用 SHA-256 當指紋
+    const fp = async (s) => {
+      if (window.crypto && crypto.subtle) {
+        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+        return [...new Uint8Array(buf)].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
+      }
+      let h = 2166136261; for (const c of s) { h ^= c.codePointAt(0); h = Math.imul(h, 16777619) >>> 0; }
+      return h.toString(16).padStart(8, '0');
+    };
+    let stored = null, original = null, cheated = false;
+    const check = async () => {
+      const now = await fp(H + '.' + forged(document.getElementById('l7-role2').value));
+      document.getElementById('l7-fp-now').textContent = now;
+      document.getElementById('l7-fp-orig').textContent = stored;
+      document.getElementById('l7-check').innerHTML = now === stored
+        ? '<span class="pill ok">對得上</span> 分店放行。'
+        : '<span class="pill bad">對不上</span> 內容被改過了！分店拒絕這張通行證。';
+    };
+
+    document.getElementById('l7-role2').addEventListener('change', () => { check(); });
+    const cheatBtn = document.getElementById('l7-cheat');
+    cheatBtn.addEventListener('click', async () => {
+      cheated = !cheated;
+      stored = cheated ? await fp(H + '.' + forged(document.getElementById('l7-role2').value)) : original;
+      cheatBtn.textContent = cheated ? '還原總部的指紋' : '幫壞人重算一個新指紋';
+      await check();
+      document.getElementById('l7-cheat-msg').textContent = cheated ? '糟糕，騙過了！只要壞人也能自己算指紋，這招就擋不住。' : '';
+    });
+    const reset = () => {
+      cheated = false; cheatBtn.textContent = '幫壞人重算一個新指紋';
+      document.getElementById('l7-cheat-msg').textContent = '';
+      showForge();
+      fp(H + '.' + P()).then((v) => { stored = original = v; check(); });
+    };
+    reset(); onName(reset);
+  })();
+</script>
+</body>
+</html>
