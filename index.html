@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
 <title>JWKS 小學堂｜闖關街</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,15 +34,6 @@
   --line: #A8987A;
   --label: #F4CD1C;      /* 黑色塊上的小標 */
   --stain: rgba(150, 105, 35, .16);
-  --doodle: .14;
-  --hand: "LXGW WenKai TC", "Kaiti TC", "BiauKai", "DFKai-SB", serif;
-  --bold: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
-  --scrawl: "Permanent Marker", "Noto Sans TC", sans-serif;
-  color-scheme: light;
-}
-/* 深色塊上的小標 */
-  --on-accent: #F6F1D2;  /* 靛藍色塊上的字 */
-  --stain: rgba(45, 116, 149, .1);
   --doodle: .14;
   --hand: "LXGW WenKai TC", "Kaiti TC", "BiauKai", "DFKai-SB", serif;
   --bold: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
@@ -2317,7 +2309,12 @@ const { payload } = await jwtVerify(token, JWKS, {
   ];
   const STAMP_BOOTH = BOOTHS.length - 1;
   const $ = (id) => document.getElementById(id);
-  const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+  // 深淺色：和 CSS 用同一套判斷。先看 <html data-theme>（有些檢視器會設定它），沒有才看系統設定。
+  // 之前 3D 場景只看系統設定、CSS 卻優先看 data-theme，兩邊不一致時就會出現「上下米白、中間暗色」。
+  const root = document.documentElement;
+  const mq = matchMedia('(prefers-color-scheme: dark)');
+  const themeIsDark = () => { const t = root.getAttribute('data-theme'); return t === 'dark' || t === 'light' ? t === 'dark' : mq.matches; };
+  let dark = themeIsDark();
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // 進度：過關的課、蓋過的章（含位置、角度、墨量）都存在這裡
@@ -2877,9 +2874,10 @@ const { payload } = await jwtVerify(token, JWKS, {
     return;
   }
 
-  const PAL = dark
+  const palette = (d) => d
     ? { sky: 0x1B1814, ground: '#2A251D', mark: 'rgba(239,227,200,.22)', skyline: '#EFE3C8', post: 0xEFE3C8 }
     : { sky: 0xEDE0C3, ground: '#E6D7B5', mark: 'rgba(26,23,20,.28)', skyline: '#1A1714', post: 0x1A1714 };
+  let PAL = palette(dark);
   const INK = '#1A1714', PAPER = '#F5EBD3';
   const mulberry = (a) => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   const pen = (ctx, rnd) => {
@@ -3095,7 +3093,7 @@ const { payload } = await jwtVerify(token, JWKS, {
   const texFrom = (cv, repeat) => { const t = new THREE.CanvasTexture(cv); t.anisotropy = aniso; if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(repeat[0], repeat[1]); } return t; };
   const plane = (w, h, tex, transparent = true) => new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, transparent, alphaTest: transparent ? .02 : 0, side: THREE.DoubleSide }));
 
-  { // 地面
+  const drawGround = () => {
     const cv = document.createElement('canvas'); cv.width = cv.height = 512;
     const ctx = cv.getContext('2d'); const rnd = mulberry(7); const P = pen(ctx, rnd);
     ctx.fillStyle = PAL.ground; ctx.fillRect(0, 0, 512, 512);
@@ -3105,24 +3103,29 @@ const { payload } = await jwtVerify(token, JWKS, {
     P.stroke([[400, 300], [430, 330], [460, 300], [490, 330]], 4, PAL.mark);
     ctx.beginPath(); ctx.arc(256, 400, 26, 0, Math.PI * 1.7); ctx.lineWidth = 4; ctx.strokeStyle = PAL.mark; ctx.stroke();
     P.stroke([[220, 180], [292, 180]], 4, PAL.mark); P.stroke([[280, 168], [294, 180], [280, 192]], 4, PAL.mark);
-    const g = plane(16, 150, texFrom(cv, [2, 19]), false); g.rotation.x = -Math.PI / 2; g.position.set(0, 0, -67); scene.add(g);
-  }
-  { // 遠景
+    return cv;
+  };
+  const groundTex = texFrom(drawGround(), [2, 19]);
+  { const g = plane(16, 150, groundTex, false); g.rotation.x = -Math.PI / 2; g.position.set(0, 0, -67); scene.add(g); }
+  const drawBack = () => {
     const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 384;
     const ctx = cv.getContext('2d'); const P = pen(ctx, mulberry(3));
     ctx.beginPath(); ctx.arc(760, 120, 70, 0, Math.PI * 2); ctx.fillStyle = 'rgba(226,50,31,.55)'; ctx.fill();
     P.hatch(690, 50, 140, 140, 'rgba(226,50,31,.7)', 4, 9);
     P.stroke([[0, 300], [60, 300], [60, 200], [150, 200], [150, 250], [220, 250], [220, 150], [290, 150], [290, 230], [380, 230], [380, 180], [470, 180], [470, 260], [560, 260], [560, 170], [640, 170], [640, 240], [720, 240], [720, 210], [830, 210], [830, 160], [900, 160], [900, 270], [1024, 270]], 6, PAL.skyline);
     P.text('JWKS!!', 300, 215, '400 46px "Permanent Marker", sans-serif', 'rgba(226,50,31,.75)');
-    const back = plane(60, 22.5, texFrom(cv)); back.position.set(0, 9, -6 - BOOTHS.length * 5.6 - 22); scene.add(back);
-  }
+    return cv;
+  };
+  const backTex = texFrom(drawBack());
+  { const back = plane(60, 22.5, backTex); back.position.set(0, 9, -6 - BOOTHS.length * 5.6 - 22); scene.add(back); }
+  const postMat = new THREE.MeshBasicMaterial({ color: PAL.post });
   { // 入口布條
     const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 200;
     const ctx = cv.getContext('2d'); const P = pen(ctx, mulberry(11));
     P.fill(30, 40, 964, 120, PAPER); P.hatch(30, 40, 964, 120, 'rgba(244,205,28,.45)', 4, 14); P.box(30, 40, 964, 120, INK, 8);
     P.text('JWKS 小學堂 闖關街', 512, 128, '900 74px "Noto Sans TC", sans-serif', INK);
     const banner = plane(4.6, .9, texFrom(cv)); banner.position.set(0, 3.9, -3); scene.add(banner);
-    [-2.35, 2.35].forEach((x) => { const post = new THREE.Mesh(new THREE.BoxGeometry(.1, 4.4, .1), new THREE.MeshBasicMaterial({ color: PAL.post })); post.position.set(x, 2.2, -3); scene.add(post); });
+    [-2.35, 2.35].forEach((x) => { const post = new THREE.Mesh(new THREE.BoxGeometry(.1, 4.4, .1), postMat); post.position.set(x, 2.2, -3); scene.add(post); });
   }
 
   const SPACING = 5.6, W = 3.2, H = 4;
@@ -3142,7 +3145,7 @@ const { payload } = await jwtVerify(token, JWKS, {
     boothTex[i].image = boothCanvas(BOOTHS[i], i);
     boothTex[i].needsUpdate = true;
   };
-  { // 三角旗
+  const drawFlags = () => {
     const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 160;
     const ctx = cv.getContext('2d'); const P = pen(ctx, mulberry(21));
     const pts = []; for (let x = 0; x <= 1024; x += 32) pts.push([x, 30 + Math.sin(x / 1024 * Math.PI) * 50]);
@@ -3153,9 +3156,24 @@ const { payload } = await jwtVerify(token, JWKS, {
       ctx.fillStyle = cols[k % cols.length]; ctx.beginPath(); ctx.moveTo(x - 24, y); ctx.lineTo(x + 24, y); ctx.lineTo(x + P.J(4), y + 66); ctx.closePath(); ctx.fill();
       ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke();
     }
-    const tex = texFrom(cv);
-    for (let k = 0; k < BOOTHS.length; k += 2) { const f = plane(7.4, 1.16, tex); f.position.set(0, 4.3, -8.5 - k * SPACING); scene.add(f); }
-  }
+    return cv;
+  };
+  const flagTex = texFrom(drawFlags());
+  for (let k = 0; k < BOOTHS.length; k += 2) { const f = plane(7.4, 1.16, flagTex); f.position.set(0, 4.3, -8.5 - k * SPACING); scene.add(f); }
+
+  // 主題切換（系統設定或檢視器的 data-theme 改變）時，3D 場景跟著換
+  const applyTheme = () => {
+    const d = themeIsDark();
+    if (d === dark) return;
+    dark = d; PAL = palette(d);
+    scene.background.set(PAL.sky); scene.fog.color.set(PAL.sky);
+    postMat.color.set(PAL.post);
+    groundTex.image = drawGround(); groundTex.needsUpdate = true;
+    backTex.image = drawBack(); backTex.needsUpdate = true;
+    flagTex.image = drawFlags(); flagTex.needsUpdate = true;
+  };
+  if (mq.addEventListener) mq.addEventListener('change', applyTheme);
+  new MutationObserver(applyTheme).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
 
   // 鏡頭與走路
   const EYE = 1.6;
