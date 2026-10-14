@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<title>JWKS 小學堂｜闖關街</title>
+<title>JWKS 小學堂</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@900&family=Permanent+Marker&display=swap" rel="stylesheet">
@@ -708,6 +708,16 @@ body { overflow: hidden; }
 .sapp.compact .stable { padding: .7rem .6rem .6rem; }
 .sapp.compact .stamps, .sapp.compact .pad-wrap { padding-top: .8rem; }
 
+/* 問答站 */
+.chip.quiz-chip { background: #1A1714; color: #F4CD1C; border-color: #1A1714; }
+.chip.quiz-chip.here { background: #F4CD1C; color: #1A1714; }
+.quiz-body { padding: 1.4rem 0 3rem; }
+.quiz-body .scene { background: var(--paper-light); border-left: 4px solid var(--red); padding: .7rem .9rem; }
+.quiz-body .scene code { font-family: var(--mono); word-break: break-all; background: var(--yellow); color: #1A1714; padding: 0 .25em; }
+.quiz-body .btn:disabled { opacity: 1; cursor: default; }
+.quiz-score { font: 900 4rem/1 var(--bold); margin: .5rem 0 1rem; filter: url(#marker); }
+.quiz-score small { font-size: 1.5rem; color: var(--ink-soft); }
+
 </style>
 </head>
 <body>
@@ -907,6 +917,7 @@ body { overflow: hidden; }
   <p class="status" id="sheet-status"></p>
   <div class="actions">
     <button class="btn primary" id="enter">開始闖關</button>
+    <button class="btn" id="enter2" hidden></button>
     <button class="btn" id="leave">離開攤位</button>
   </div>
 </section>
@@ -2252,6 +2263,17 @@ const { payload } = await jwtVerify(token, JWKS, {
   </div>
 </section>
 
+<section class="ov" id="quiz-ov" hidden aria-label="問答站">
+  <header class="ovbar">
+    <b id="quiz-title">問答站</b>
+    <button class="btn btn-sm" id="quiz-back">回到問答站</button>
+  </header>
+  <main class="wrap">
+    <div class="progress"><div class="dots" id="quiz-dots" aria-hidden="true"></div><span class="progress-text" id="quiz-progress"></span></div>
+    <div class="quiz-body" id="quiz-body" aria-live="polite"></div>
+  </main>
+</section>
+
 <div class="held" id="held" hidden></div>
 <div class="loading" id="loading">攤位搭建中……</div>
 <div class="fallback" id="fallback" hidden>這台裝置不支援 3D 畫面。<br>可以用下方的攤位按鈕逛逛。</div>
@@ -2360,12 +2382,12 @@ const { payload } = await jwtVerify(token, JWKS, {
   // ═════ 攤位按鈕列 ═════
   const chips = $('chips');
   const renderChips = (here) => {
-    chips.innerHTML = BOOTHS.map((b, i) => {
+    const q = store.quizUnlocked ? `<button class="chip quiz-chip${here === 100 ? ' here' : ''}" data-i="100">起點：問答站</button>` : '';
+    chips.innerHTML = q + BOOTHS.map((b, i) => {
       const cls = ['chip', b.open ? '' : 'locked', b.n && isCleared(b.n) ? 'cleared' : '', i === here ? 'here' : ''].join(' ');
       return `<button class="${cls}" data-i="${i}">${b.n ? '第 ' + b.n + ' 課' : b.title}</button>`;
     }).join('');
   };
-  renderChips(-1);
 
   // ═════ 課程覆蓋層：一畫面一步驟 ═════
   const lessonOv = $('lesson-ov');
@@ -2629,6 +2651,7 @@ const { payload } = await jwtVerify(token, JWKS, {
     msgs.push(...inkNotes(imp));
     hold.ink = INK_START; refreshTable();
     const stamped = target;
+    if (unlockQuizIfReady()) { world.quizUnlocked && world.quizUnlocked(); setTimeout(() => hint('', '整張集章卡 16 關都集滿了！<br>回頭看看街道的<strong>起點</strong>，好像多了一個攤位……'), 1600); }
     target = null;
     renderSlots();
     hint('', msgs.join('') + (side === 'front'
@@ -2700,7 +2723,8 @@ const { payload } = await jwtVerify(token, JWKS, {
     $('archive-now').hidden = !old;
     if (!old) { $('archive-next').textContent = '看舊卡'; $('archive-prev').hidden = true; } else $('archive-prev').hidden = false;
     $('swap').hidden = old;
-    $('scard-name').textContent = old ? `舊卡 #${viewIndex + 1}` : `${window.jwksName()} 的集章卡`;
+    const sub = old && store.cards[viewIndex].submitted;
+    $('scard-name').textContent = old ? `舊卡 #${viewIndex + 1}` + (sub ? `（已交到問答站${sub.score ? '，' + sub.score + ' 分' : ''}）` : '') : `${window.jwksName()} 的集章卡`;
     swapArmed = false; $('swap').textContent = '換一張新卡'; $('swap-cancel').hidden = true;
   };
   const viewCard = (i) => { viewIndex = Math.max(0, Math.min(store.cards.length - 1, i)); renderArchive(); setSide('front', false); defaultHint(); };
@@ -2819,7 +2843,200 @@ const { payload } = await jwtVerify(token, JWKS, {
 
   // ═════ 攤位招牌面板 ═════
   let sheetIndex = -1;
+  // ═════ 問答站（隱藏關卡）：集滿 16 關的卡交出去，才能參加總複習 ═════
+  const QUIZ = 100;          // 問答站在攤位列表裡用的編號
+  const CAT_NEED = 3;        // 卡上有幾個貓咪章，就開啟貓咪隱藏關
+  if (!store.quizzes) store.quizzes = [];
+  const cardLessons = (c) => new Set(c.front.concat(c.back).map((i) => i.lesson));
+  const cardComplete = (c) => { const s = cardLessons(c); for (let n = 1; n <= SLOTS; n++) if (!s.has(n)) return false; return true; };
+  const missing = (c) => { const s = cardLessons(c), m = []; for (let n = 1; n <= SLOTS; n++) if (!s.has(n)) m.push(n); return m; };
+  const catCount = (c) => c.front.concat(c.back).filter((i) => i.v === 'cat').length;
+  const quizUnlocked = () => !!store.quizUnlocked;
+  const unlockQuizIfReady = () => {
+    if (store.quizUnlocked || !cardComplete(card())) return false;
+    store.quizUnlocked = true; saveStore();
+    return true;
+  };
+
+  // 題庫：每題都是「情境」，數字、服務、名字每次隨機，避免背答案
+  const APPS = ['記帳', '相簿', '行事曆', '筆記', '音樂', '地圖', '購物', '健身'];
+  const qPick = (a) => a[Math.floor(Math.random() * a.length)];
+  const qPick2 = (a) => { const x = qPick(a); let y = qPick(a); while (y === x) y = qPick(a); return [x, y]; };
+  const qShuffle = (a) => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+  const qB64 = (str) => { const bytes = new TextEncoder().encode(str); let bin = ''; bytes.forEach((b) => { bin += String.fromCharCode(b); }); return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+  const hm = (iatMin, plus) => { const t = iatMin + plus; return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
+  const BANK = [
+    (N) => { const app = qPick(APPS); return { lesson: 1, title: '健忘的伺服器', scene: `${N} 在${app}登入之後，接著按了「看我的資料」。伺服器每處理完一個請求，就會忘記是誰送來的。`, ask: `那伺服器怎麼還認得 ${N}？`, opts: ['瀏覽器每次請求都附上登入時拿到的證明', '伺服器偷偷把每個人都記在腦子裡', `${N} 每點一下都重新輸入密碼`, '伺服器看網路位址就知道是誰'], explain: '伺服器是無狀態的。登入時換到一個證明，之後每次請求都附上它（第 1 課）。' }; },
+    () => ({ lesson: 1, title: '每次都送密碼？', scene: '有人提議：「乾脆每次請求都附上帳號密碼，最簡單。」', ask: '這個做法最大的問題是什麼？', opts: ['密碼被送出去的次數變多，而且每次核對密碼都很慢', '伺服器會記不住密碼', '密碼太長，放不進請求裡', '這樣就不需要登入頁了'], explain: '密碼到處跑很危險，而核對密碼刻意設計得很費工，每次都做會很卡（第 1 課）。' }),
+    () => { const app = qPick(APPS); return { lesson: 2, title: '讓號碼牌立刻失效', scene: `${app}用的是「號碼牌」（session）做法。客服要讓一個被盜的帳號立刻登出。`, ask: '最直接的做法是？', opts: ['在伺服器把那筆號碼牌紀錄刪掉', '等號碼牌自己過期', '請使用者自己清除瀏覽器', '再發一張新的號碼牌給壞人'], explain: '號碼牌的資料存在伺服器，刪掉紀錄就立刻失效。這是 session 做法的優點（第 2 課）。' }; },
+    () => { const n = qPick([5, 8, 12, 20]); return { lesson: 3, title: '每次都打電話問總部', scene: `公司有 ${n} 個服務，每個服務收到請求時，都打電話問登入服務「這個人是誰」。`, ask: '這樣做最大的風險是？', opts: ['登入服務一停擺，所有服務一起停擺', '服務太多會讓密碼變短', `使用者需要登入 ${n} 次`, '沒有任何風險'], explain: '所有服務都依賴總部回答，總部就成了單點故障（第 3 課）。' }; },
+    () => ({ lesson: 4, title: '看哪一段', scene: '你拿到一張通行證：<code>xxxx.yyyy.zzzz</code>', ask: '想知道它什麼時候到期，要看哪一段？', opts: ['第二段（內容）', '第一段（抬頭）', '第三段（印章）', '三段要合起來才看得出來'], explain: '到期時間 exp 和身分資料都在第二段 payload（第 4、6 課）。' }),
+    (N) => ({ lesson: 5, title: '同事的建議', scene: `同事說：「JWT 看起來是亂碼，代表加密過了，把 ${N} 的身分證字號放進去沒關係。」`, ask: '你會怎麼回？', opts: ['不行，內容只是 base64，誰都能轉回原文', '可以，base64 就是一種加密', '可以，只要第三段有簽章就看不到', '可以，只有總部解得開'], explain: 'base64 只是換包裝，不是上鎖。簽章防的是偷改，不是偷看（第 5 課）。' }),
+    () => { const roles = ['member', 'vip', 'admin', 'editor']; const r = qPick(roles); return { lesson: 5, title: '自己解解看', scene: `通行證內容裡剪下來的一段：<code>${qB64(JSON.stringify({ role: r }))}</code>`, ask: '這一段寫的 role 是什麼？（提示：它只是 base64）', opts: [r].concat(roles.filter((x) => x !== r)), explain: `丟進轉換機就能看到 {"role":"${r}"}，不需要任何密碼（第 5 課）。` }; },
+    () => { const m = qPick([5, 15, 30, 60]); const iat = 1791856800; return { lesson: 6, title: '讀懂時間', scene: `通行證內容寫著 <code>"iat": ${iat}</code>、<code>"exp": ${iat + m * 60}</code>。`, ask: '這張通行證有效多久？', opts: [`${m} 分鐘`].concat([5, 15, 30, 60].filter((x) => x !== m).map((x) => `${x} 分鐘`)), explain: `時間是秒數，相差 ${m * 60} 秒，也就是 ${m} 分鐘（第 6 課）。` }; },
+    (N) => { const [a, b] = qPick2(APPS); return { lesson: 16, title: '走錯分店', scene: `一張真的、簽章正確的通行證，aud 寫的是「${a}」，被拿到${b}分店使用。`, ask: `聰明的${b}分店該怎麼做？`, opts: ['拒絕，因為收件人不是自己', '放行，簽章是真的就好', '放行，但只給看一半的資料', `打電話叫 ${N} 重新登入`], explain: '除了比對簽章，還要檢查 aud 是不是自己（第 6、16 課）。' }; },
+    () => { const w = qPick(['我是小明', '今天午餐 120 元', 'role=member', '芝麻開門']); return { lesson: 8, title: '差一個句號', scene: `把「${w}」改成「${w}。」，再丟進指紋機（SHA-256）。`, ask: '指紋會怎樣？', opts: ['幾乎整串都變得不一樣', '只有最後一個字會變', '完全一樣', '指紋會變長一點'], explain: '差一點點，指紋就完全不同，所以能抓到偷改（第 8 課）。' }; },
+    () => ({ lesson: 8, title: '倒推指紋', scene: '你拿到一串 SHA-256 指紋。', ask: '能從指紋直接算回原本的內容嗎？', opts: ['不行，只能把猜的內容丟進去比對', '可以，反過來算一次就好', '可以，用 base64 解開就好', '只有總部可以'], explain: '指紋機打不回去，只能一個一個猜、再比對（第 8 課）。' }),
+    () => { const n = qPick([4, 6, 10]); const b = qPick(APPS); return { lesson: 9, title: '暗號外洩', scene: `${n} 個服務都用同一句 HS256 暗號檢查通行證。其中${b}服務被駭，暗號外洩了。`, ask: '後果是？', opts: ['壞人能做出所有服務都接受的通行證', `只有${b}服務受影響`, '沒影響，暗號只能用來檢查', '壞人只能看、不能改'], explain: '共用暗號等於共用印章，一個地方外洩，全部淪陷（第 9 課）。' }; },
+    () => ({ lesson: 10, title: '公鑰被貼上網', scene: '總部的公鑰被人貼到網路論壇上。', ask: '這有多嚴重？', opts: ['沒關係，公鑰本來就公開，只能用來比對', '非常嚴重，壞人可以用它蓋章', '要立刻關閉所有服務', '所有通行證都會失效'], explain: '公鑰就是印鑑證明，拿著它蓋不出章（第 10 課）。' }),
+    () => { const b = qPick(APPS); return { lesson: 10, title: '設定新分店', scene: `你要幫新開的${b}分店設定通行證檢查。`, ask: '分店需要拿到什麼？', opts: ['總部的公鑰', '總部的私鑰', '私鑰和公鑰都要', '使用者的密碼'], explain: '分店只需要比對，給公鑰就好；私鑰永遠留在總部（第 10 課）。' }; },
+    () => ({ lesson: 14, title: '私鑰可能外洩', scene: '總部發現私鑰可能被偷看過了。', ask: '應該怎麼做？', opts: ['做一顆新印章，公告新公鑰，撤下舊的', '把公鑰藏起來就好', '什麼都不用做', '把所有通行證的有效期改長'], explain: '私鑰外洩就要換印章，照順序輪替（第 12、14 課）。' }),
+    (N) => ({ lesson: 12, title: '只改內容', scene: `${N} 把自己通行證第二段的 role 改成 admin，第三段的章沒動。`, ask: '分店用公鑰檢查時會？', opts: ['比對失敗，因為章是對著原本的內容蓋的', '通過，因為章是真的', '通過，因為 role 不在檢查範圍', '分店看不出來'], explain: '簽章是對「第一段.第二段」算的，內容一改就對不上（第 12 課）。' }),
+    () => ({ lesson: 12, title: '剪貼別人的章', scene: '壞人把另一張真通行證的第三段剪下來，貼到自己改過內容的通行證上。', ask: '結果會？', opts: ['失敗，因為那個章是對著別人的內容蓋的', '成功，因為章是總部蓋的', '成功，只要 kid 一樣', '要看運氣'], explain: '章和內容綁在一起，換了內容就對不起來（第 12 課）。' }),
+    () => ({ lesson: 12, title: '自己刻一顆章', scene: '壞人自己做了一對金鑰，用自己的私鑰重新蓋章，抬頭還照抄了總部的 kid。', ask: '分店用公告欄上的公鑰比對，結果？', opts: ['失敗，因為不是總部的私鑰蓋的', '成功，因為 kid 對得上', '成功，因為格式完全正確', '成功，只要演算法一樣'], explain: 'kid 只是告訴分店用哪一把公鑰，真正的關鍵是章是不是那把私鑰蓋的（第 12 課）。' }),
+    () => { const b = qPick(APPS); return { lesson: 13, title: '去哪拿公鑰', scene: `新開的${b}分店要開始檢查通行證。`, ask: '總部的公鑰從哪裡拿最合適？', opts: ['總部公開的 JWKS 網址（例如 /.well-known/jwks.json）', '請使用者每次附上', '每次都打電話問總部', '從通行證的第三段解出來'], explain: '總部把公鑰貼在固定網址的公告欄上，分店自己去抄（第 13 課）。' }; },
+    () => { const n = qPick([200, 800, 3000]); const b = qPick(APPS); return { lesson: 13, title: '很忙的分店', scene: `${b}分店每秒收到 ${n} 張通行證。`, ask: '公鑰怎麼拿比較好？', opts: ['抄一份 JWKS 快取起來，過期或遇到新 kid 才更新', '每張通行證都重新下載一次 JWKS', '每張都打電話問總部', '太忙了，不檢查章直接放行'], explain: '快取 JWKS，大部分時候都在分店自己比對（第 13 課）。' }; },
+    () => { const kid = qPick(['hq-2026-11', 'key-B', 'k7', 'blue-stamp']); return { lesson: 14, title: '沒見過的編號', scene: `通行證抬頭寫著 kid「${kid}」，分店快取的 JWKS 裡沒有這一號。`, ask: '合理的做法是？', opts: ['重新抓一次 JWKS，還是沒有才拒絕', '直接放行', '隨便拿一把公鑰試試', '立刻永久封鎖這個使用者'], explain: '可能是總部剛換了新章，重抓一次公告就知道（第 14 課）。' }; },
+    () => ({ lesson: 14, title: '換印章的順序', scene: '總部要把 A 章換成 B 章。', ask: '正確的順序是？', opts: ['先公告 B 的公鑰 → 改用 B 章 → 舊通行證過期後撤下 A', '先改用 B 章 → 再公告 B 的公鑰 → 撤下 A', '先撤下 A → 公告 B 的公鑰 → 改用 B 章', '三件事同時做'], explain: '順序錯了，新通行證會被還沒更新公告的分店擋下來（第 14 課）。' }),
+    (N) => { const m = qPick([5, 15, 30, 60]); return { lesson: 15, title: '停權的空窗期', scene: `${N} 的帳號在 10:07 被停權。他的通行證是 10:00 發的，有效 ${m} 分鐘，而分店不會問總部。`, ask: '偷到這張通行證的壞人，最晚能用到幾點？', opts: [hm(600, m)].concat([...new Set(['10:07'].concat([5, 15, 30, 60].filter((x) => x !== m).map((x) => hm(600, x))))].filter((t) => t !== hm(600, m)).slice(0, 3)), explain: '分店只看到期時間，所以會一直用到 exp 為止（第 15 課）。' }; },
+    () => ({ lesson: 15, title: '不想一直重新登入', scene: '通行證只有 15 分鐘就過期。', ask: '怎麼讓使用者不用一直重新登入？', opts: ['過期時拿續約卡（refresh token）回總部換新', '把有效期改成一年', '讓分店幫忙延長', '讓使用者自己改 exp'], explain: '短效通行證＋續約，續約時總部還能順便把關停權（第 15 課）。' }),
+    () => { const app = qPick(['網路銀行', '購物', '帳號設定']); return { lesson: 15, title: '高風險的動作', scene: `${app}裡有「轉帳」或「改密碼」這種動作。`, ask: '比較穩妥的做法是？', opts: ['這種動作另外向總部確認一次帳號狀態', '跟一般請求一樣，看通行證就好', '把通行證有效期改長', '只檢查 role'], explain: '高風險動作值得多花一點時間問總部（第 15 課）。' }; },
+    () => ({ lesson: 16, title: '不用蓋章的通行證', scene: '一張通行證的抬頭寫著 "alg": "none"，第三段是空的，內容寫著管理員。', ask: '聰明分店會？', opts: ['拒絕，只接受事先講好的蓋章方式', '放行，因為它說不用蓋章', '放行，但只給一般權限', '去 JWKS 找 none 的公鑰'], explain: '不能讓通行證自己決定怎麼被檢查（第 16 課）。' }),
+    () => { const late = qPick([20, 45, 90]); return { lesson: 16, title: '過期很久了', scene: `一張簽章正確的通行證，已經過期 ${late} 分鐘，分店的時鐘寬限是 30 秒。`, ask: '結果？', opts: ['拒絕，已經超過寬限很多', '放行，因為簽章是真的', '放行，寬限可以累積', '要打電話問總部'], explain: '寬限只是給時鐘誤差用的，不是延長有效期（第 16 課）。' }; },
+    () => ({ lesson: 16, title: '剛過期幾秒', scene: '一張簽章正確的通行證，剛過期 5 秒，分店設定了 30 秒的時鐘寬限。', ask: '結果？', opts: ['放行，因為還在寬限範圍內', '拒絕，過期就是過期', '要打電話問總部', '要求重新登入兩次'], explain: '每台電腦的時鐘多少有誤差，留一點寬限是合理的（第 16 課）。' }),
+    () => ({ lesson: 16, title: '陌生的發證者', scene: '一張通行證的 iss 寫的是 "https://auth.evil.example"。', ask: '聰明分店會？', opts: ['拒絕，發證的不是自己認識的總部', '放行，只要格式正確', '去那個網址抓公鑰來檢查', '只看 aud 就好'], explain: '只相信自己認識的總部，不能讓通行證指定要去哪裡拿公鑰（第 6、16 課）。' }),
+    () => ({ lesson: 5, title: '通行證裡放什麼', scene: '你在設計通行證的內容。', ask: '下面哪個最適合放進去？', opts: ['使用者 ID 和角色', '使用者的密碼', '信用卡號', '病歷資料'], explain: '通行證誰都能讀，只放必要、不怕被看到的識別資訊（第 5 課）。' })
+  ];
+  const CATS = [
+    () => ({ title: '貓咪的鬍鬚', scene: '貓咪臉上那幾根長長的鬍鬚。', ask: '主要用來做什麼？', opts: ['感覺周圍的空間和氣流', '純粹裝飾', '聞味道', '保暖'], explain: '鬍鬚很敏感，能幫貓判斷縫隙能不能鑽、周圍有什麼東西。' }),
+    () => ({ title: '睡覺時間', scene: '一隻健康的成貓。', ask: '一天大約睡多久？', opts: ['大約 12 到 16 小時', '大約 4 小時', '大約 8 小時，跟人一樣', '幾乎不睡'], explain: '貓很會睡，一天睡一大半是正常的。' }),
+    () => ({ title: '危險的花', scene: '你想在有貓的家裡擺盆栽。', ask: '下面哪一種對貓特別危險？', opts: ['百合花', '貓草', '煮熟的雞胸肉', '南瓜泥'], explain: '百合對貓有劇毒，連花粉都很危險，有貓的家最好不要放。' }),
+    () => ({ title: '呼嚕呼嚕', scene: '貓咪發出「呼嚕呼嚕」的聲音。', ask: '這代表？', opts: ['常常是開心，但緊張或不舒服時也可能會', '一定是開心', '一定是生氣', '只有睡著才會'], explain: '呼嚕不一定代表開心，要配合其他肢體語言一起看。' }),
+    () => ({ title: '慢慢眨眼', scene: '貓咪看著你，慢慢地眨了一下眼睛。', ask: '這通常代表？', opts: ['放鬆、信任你', '生氣了', '想睡了而已', '眼睛不舒服'], explain: '這種「貓咪之吻」是放鬆和信任的訊號，你也可以慢慢眨回去。' }),
+    () => ({ title: '豎起來的尾巴', scene: '貓咪把尾巴高高豎直，朝你走過來。', ask: '這通常代表？', opts: ['友善地打招呼', '準備攻擊', '很害怕', '肚子痛'], explain: '尾巴高高豎起，多半是心情好、來跟你打招呼。' }),
+    () => ({ title: '甜甜的', scene: '你拿一小口甜點給貓聞。', ask: '貓對甜味的感覺是？', opts: ['嚐不太出甜味', '最喜歡甜的', '只吃甜的', '吃了會變超級貓'], explain: '貓缺少感覺甜味的受器，所以甜點對牠沒什麼吸引力（而且也不適合給牠吃）。' }),
+    () => ({ title: '黑暗中的眼睛', scene: '晚上關了燈，貓咪看著你。', ask: '牠的瞳孔會怎樣？', opts: ['放大成圓圓的，讓更多光進來', '縮成一條細線', '變成別的顏色', '完全不會變'], explain: '暗處瞳孔放大、亮處縮成一條線，所以貓在暗處看得很清楚。' }),
+    () => ({ title: '喵演算法', scene: '總部的貓踩過鍵盤，把一張通行證的 alg 改成 "meow"。', ask: '聰明分店會？', opts: ['拒絕，只接受事先講好的蓋章方式', '放行，因為很可愛', '回一聲「喵」', '去 JWKS 找 meow 的公鑰'], explain: '不管多可愛，蓋章方式都要是事先講好的那一種（第 16 課）。' }),
+    () => ({ title: '私鑰被叼走了', scene: '總部的貓把存私鑰的隨身碟叼走，藏到沙發底下。', ask: '最穩妥的做法是？', opts: ['當作外洩：做新印章、公告新公鑰、撤下舊的', '給牠一個罐罐換回來就沒事', '什麼都不用做', '把公鑰也給牠'], explain: '找不到的私鑰就當作外洩，照順序換印章（第 14 課）。' }),
+    () => ({ title: '踩過的通行證', scene: '貓走過鍵盤，在通行證第二段多踩出一個字母。', ask: '分店檢查時會？', opts: ['簽章比對失敗', '沒差，多一個字而已', '通行證變成貓咪限定版', '有效期自動延長'], explain: '內容差一個字，簽章就對不上（第 12 課）。' })
+  ];
+  const qBuild = (bank, n, name) => qShuffle(bank).slice(0, n).map((g) => {
+    const q = g(name);
+    const order = qShuffle(q.opts.map((o, k) => k));
+    return { ...q, opts: order.map((k) => q.opts[k]), a: order.indexOf(0) };
+  });
+
+  const quizOv = $('quiz-ov');
+  const runQuiz = (kind, cats, cardIndex) => {
+    const n = kind === 'cat' ? 6 : 12;
+    store.quizRun = { kind, cardIndex, qs: qBuild(kind === 'cat' ? CATS : BANK, n, window.jwksNameHTML()), i: 0, score: 0, wrong: [], picked: null, cats: cats || 0 };
+    saveStore(); openQuiz();
+  };
+  const openQuiz = () => { quizOv.hidden = false; renderQuiz(); quizOv.scrollTop = 0; };
+  const closeQuiz = () => { quizOv.hidden = true; };
+  const renderQuiz = () => {
+    const r = store.quizRun; if (!r) return;
+    $('quiz-title').textContent = r.kind === 'cat' ? '貓咪隱藏關' : '問答站：總複習';
+    const dots = $('quiz-dots');
+    dots.innerHTML = r.qs.map((_, k) => `<span class="dot${k < r.i ? ' past' : ''}${k === r.i ? ' on' : ''}"></span>`).join('');
+    if (r.i >= r.qs.length) return renderResult();
+    $('quiz-progress').textContent = `第 ${r.i + 1} 題，共 ${r.qs.length} 題　答對 ${r.score} 題`;
+    const q = r.qs[r.i];
+    $('quiz-body').innerHTML = `<h2>${q.title}</h2><p class="scene">${q.scene}</p><p><strong>${q.ask}</strong></p>
+      <div class="quiz" id="quiz-opts">${q.opts.map((o, k) => `<button class="btn" data-k="${k}">${o}</button>`).join('')}</div>
+      <div id="quiz-after" aria-live="polite"></div>`;
+    if (r.picked !== null) showPicked();
+  };
+  const showPicked = () => {
+    const r = store.quizRun, q = r.qs[r.i];
+    $('quiz-opts').querySelectorAll('.btn').forEach((b) => {
+      const k = +b.dataset.k;
+      b.disabled = true;
+      if (k === q.a) b.classList.add('right'); else if (k === r.picked) b.classList.add('wrong');
+    });
+    const ok = r.picked === q.a;
+    $('quiz-after').innerHTML = `<div class="real"><p class="label">${ok ? '答對了！' : '再想想'}</p><p>${q.explain}</p></div>
+      <div class="actions"><button class="btn primary" id="quiz-next">${r.i + 1 < r.qs.length ? '下一題' : '看成績'}</button></div>`;
+  };
+  $('quiz-body').addEventListener('click', (e) => {
+    const r = store.quizRun; if (!r) return;
+    const opt = e.target.closest('#quiz-opts .btn');
+    if (opt && r.picked === null) {
+      r.picked = +opt.dataset.k;
+      const q = r.qs[r.i];
+      if (r.picked === q.a) r.score++; else if (q.lesson) r.wrong.push(q.lesson);
+      saveStore(); showPicked(); return;
+    }
+    if (e.target.closest('#quiz-next')) { r.i++; r.picked = null; saveStore(); renderQuiz(); quizOv.scrollTop = 0; }
+    if (e.target.closest('#quiz-cat')) runQuiz('cat');
+    if (e.target.closest('#quiz-done')) { closeQuiz(); world.afterQuiz && world.afterQuiz(); }
+  });
+  const renderResult = () => {
+    const r = store.quizRun, total = r.qs.length, N = window.jwksNameHTML();
+    $('quiz-progress').textContent = `答對 ${r.score} 題，共 ${total} 題`;
+    let msg, extra = '';
+    if (r.kind === 'cat') {
+      msg = r.score === total ? `${N} 是貓咪博士！所有貓咪都向你慢慢眨眼。` : r.score >= total / 2 ? '不錯喔，貓咪們勉強承認你了。' : '貓咪們對你翻了個肚子……然後走掉了。';
+    } else {
+      const pct = r.score / total;
+      msg = pct === 1 ? `滿分！${N} 已經完全掌握 JWKS 模式了。` : pct >= .8 ? '很穩！只差一點點就滿分。' : pct >= .6 ? '不錯！有幾個地方可以再複習一下。' : '建議重新集一張卡，再來挑戰一次。';
+      const review = [...new Set(r.wrong)].sort((a, b) => a - b);
+      if (review.length) extra += `<p>建議複習：${review.map((n) => `第 ${n} 課`).join('、')}。</p>`;
+      if (r.cats >= CAT_NEED) extra += `<p>等等……你交出的集章卡上有 <strong>${r.cats} 個貓咪章</strong>。好像有什麼東西被打開了。</p><div class="actions"><button class="btn" id="quiz-cat">進入貓咪隱藏關</button></div>`;
+      else extra += '<p class="note">聽說交出很多貓咪章的人，會遇到奇怪的事。</p>';
+    }
+    if (!r.recorded) {
+      store.quizzes.push({ at: Date.now(), kind: r.kind, score: r.score, total });
+      if (r.kind === 'main' && r.cats >= CAT_NEED) store.catUnlocked = true;
+      const sc = r.kind === 'main' && store.cards[r.cardIndex];
+      if (sc && sc.submitted) sc.submitted.score = `${r.score}/${total}`;
+      r.recorded = true; saveStore();
+    }
+    $('quiz-body').innerHTML = `<h2>${r.kind === 'cat' ? '貓咪隱藏關結束' : '總複習完成'}</h2>
+      <p class="quiz-score">${r.score}<small> / ${total}</small></p><p class="lead">${msg}</p>${extra}
+      <div class="actions"><button class="btn primary" id="quiz-done">回到問答站</button></div>`;
+  };
+  $('quiz-back').addEventListener('click', () => { closeQuiz(); world.afterQuiz && world.afterQuiz(); });
+  const qBest = () => store.quizzes.filter((q) => q.kind === 'main').reduce((b, q) => (!b || q.score / q.total > b.score / b.total ? q : b), null);
+
+  // 問答站的招牌面板
+  let submitArmed = false;
+  const openQuizSheet = () => {
+    sheetIndex = QUIZ;
+    const c = card(), b = qBest();
+    $('sheet-kicker').textContent = 'HIDDEN';
+    $('sheet-title').textContent = '問答站';
+    $('sheet-desc').textContent = '交出一張集滿 16 關的集章卡，參加總複習。題目都是情境題，每次都不一樣。';
+    let status = b ? `目前最佳成績：${b.score} / ${b.total}。` : '';
+    const enter = $('enter'), enter2 = $('enter2');
+    enter.disabled = false; enter2.hidden = true; submitArmed = false;
+    const r = store.quizRun;
+    if (r && !r.recorded) { enter.textContent = '繼續作答'; status += `你上次答到第 ${Math.min(r.i + 1, r.qs.length)} 題。`; }
+    else if (cardComplete(c)) { enter.textContent = '提交集章卡'; status += '交出後，這張卡會收進收藏。想再挑戰，就要重新集滿一張。'; }
+    else {
+      enter.textContent = '集章卡還沒集滿'; enter.disabled = true;
+      const m = missing(c);
+      status += m.length === SLOTS ? '現在這張是新卡，還沒有章。重新闖關、集滿 16 關，就能再來挑戰。'
+        : m.length > 6 ? `這張卡還缺 ${m.length} 關，集滿 16 關就能參加。`
+        : `這張卡還缺：${m.map((n) => `第 ${n} 關`).join('、')}。`;
+    }
+    if (store.catUnlocked) { enter2.hidden = false; enter2.textContent = '貓咪隱藏關'; }
+    $('sheet-status').textContent = status;
+    $('enter').dataset.stamp = '';
+    $('sheet').hidden = false;
+  };
+  const quizEnter = () => {
+    const r = store.quizRun;
+    if (r && !r.recorded) return openQuiz();
+    const c = card();
+    if (!cardComplete(c)) return;
+    if (!submitArmed) {
+      submitArmed = true;
+      $('enter').textContent = '確定提交';
+      $('sheet-status').textContent = `確定交出這張卡嗎？交出後這張卡會收進收藏（章都不會消失），然後開始 12 題總複習。`;
+      return;
+    }
+    const cats = catCount(c);
+    c.submitted = { at: Date.now(), cats };
+    store.cards.push(newCard()); store.credits = {};
+    closeSheet();
+    runQuiz('main', cats, store.cards.length - 2);
+  };
+
+  renderChips(-1);
   const openSheet = (i) => {
+    if (i === QUIZ) return openQuizSheet();
+    $('enter2').hidden = true;
     const b = BOOTHS[i];
     sheetIndex = i;
     $('sheet-kicker').textContent = b.n ? `LESSON ${b.n}` : 'STAMP';
@@ -2846,7 +3063,9 @@ const { payload } = await jwtVerify(token, JWKS, {
     $('sheet').hidden = false;
   };
   const closeSheet = () => { $('sheet').hidden = true; };
+  $('enter2').addEventListener('click', () => { if (sheetIndex === QUIZ) { closeSheet(); runQuiz('cat'); } });
   $('enter').addEventListener('click', () => {
+    if (sheetIndex === QUIZ) return quizEnter();
     const b = BOOTHS[sheetIndex];
     if (!b || !b.open) return;
     if (!b.n) openStamp();
@@ -2856,7 +3075,7 @@ const { payload } = await jwtVerify(token, JWKS, {
 
   // ═════ 3D 世界（失敗時退回按鈕導覽） ═════
   let fbHere = -1;
-  const world = { go: (i, cb) => { fbHere = i; renderChips(i); cb ? cb() : openSheet(i); }, redrawBooth: () => {}, here: () => fbHere };
+  const world = { go: (i, cb) => { fbHere = i; renderChips(i); cb ? cb() : openSheet(i); }, redrawBooth: () => {}, here: () => fbHere, afterQuiz: () => { renderChips(fbHere); if (fbHere === QUIZ) openSheet(QUIZ); } };
   $('stamp-back').addEventListener('click', () => { if (!world.leave && fbHere >= 0) { renderChips(fbHere); openSheet(fbHere); } });
   $('leave').addEventListener('click', () => world.leave ? world.leave() : (closeSheet(), renderChips(-1)));
   chips.addEventListener('click', (e) => { const c = e.target.closest('.chip'); if (c) world.go(+c.dataset.i); });
@@ -2907,7 +3126,7 @@ const { payload } = await jwtVerify(token, JWKS, {
     const cv = document.createElement('canvas'); cv.width = 512; cv.height = 640;
     const ctx = cv.getContext('2d'); const P = pen(ctx, mulberry(100 + i * 17));
     P.fill(118, 22, 276, 84, PAPER); P.box(118, 22, 276, 84, INK, 7);
-    P.text(b.n ? `第 ${b.n} 課` : '集章處', 256, 84, '900 52px "Noto Sans TC", sans-serif', b.n ? INK : '#B8231A');
+    P.text(b.sign || (b.n ? `第 ${b.n} 課` : '集章處'), 256, 84, '900 52px "Noto Sans TC", sans-serif', b.n ? INK : '#B8231A');
     P.stroke([[160, 106], [160, 132]], 7, INK); P.stroke([[352, 106], [352, 132]], 7, INK);
     const top = 132, bot = 206, stripes = 8, x0 = 40, x1 = 472, sw = (x1 - x0) / stripes;
     for (let k = 0; k < stripes; k++) {
@@ -3057,6 +3276,12 @@ const { payload } = await jwtVerify(token, JWKS, {
       P.text('alg:', 0, -6, '700 18px ui-monospace, Menlo, monospace', INK);
       P.text('none', 0, 20, '700 20px ui-monospace, Menlo, monospace', '#B8231A');
       ctx.restore();
+    } else if (b.prop === 'quiz') {
+      P.text('?', 196, 392, '400 150px "Permanent Marker", sans-serif', '#E2321F');
+      ctx.beginPath(); ctx.arc(330, 392, 40, Math.PI, 0); ctx.closePath(); ctx.fillStyle = '#F4CD1C'; ctx.fill(); ctx.lineWidth = 6; ctx.strokeStyle = INK; ctx.stroke();
+      P.fill(280, 392, 100, 12, INK);
+      ctx.beginPath(); ctx.arc(330, 346, 7, 0, Math.PI * 2); ctx.fillStyle = INK; ctx.fill();
+      P.text('16/16', 330, 300, '400 26px "Permanent Marker", sans-serif', INK);
     } else if (b.prop === 'stamps') {
       [['#E2321F', 150], ['#F4CD1C', 256], ['#F49AC1', 362]].forEach(([c, x]) => {
         P.fill(x - 34, 392, 68, 34, '#D9B27C'); P.box(x - 34, 392, 68, 34, INK, 4);
@@ -3139,6 +3364,13 @@ const { payload } = await jwtVerify(token, JWKS, {
     scene.add(m); boothTex.push(tex); boothMeshes.push(m);
   });
   document.addEventListener('jwks:name', () => BOOTHS.forEach((b, i) => { boothTex[i].image = boothCanvas(b, i); boothTex[i].needsUpdate = true; }));
+  const QZ = 11;   // 起點後方
+  const QBOOTH = { n: 0, sign: '問答站', title: '問答站', open: true, awning: ['#F4CD1C', '#1A1714'], counter: '#E2321F', prop: 'quiz' };
+  const quizMesh = plane(W, H, texFrom(boothCanvas(QBOOTH, 99)));
+  quizMesh.position.set(0, H / 2, QZ); quizMesh.rotation.y = Math.PI; quizMesh.userData.i = QUIZ;
+  const showQuizBooth = () => { if (!quizMesh.parent) { scene.add(quizMesh); boothMeshes.push(quizMesh); } };
+  if (quizUnlocked()) showQuizBooth();
+  world.quizUnlocked = () => { showQuizBooth(); renderChips(here); $('hud-hint').textContent = '起點多了一個攤位，回頭看看！'; };
   world.redrawBooth = (n) => {
     const i = BOOTHS.findIndex((b) => b.n === n);
     if (i < 0) return;
@@ -3184,6 +3416,11 @@ const { payload } = await jwtVerify(token, JWKS, {
   const yawTo = (f, t) => Math.atan2(-(t.x - f.x), -(t.z - f.z));
   const angleDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
   const ease = (t) => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const quizStand = () => {
+    const vfov = camera.fov * Math.PI / 180, hfov = 2 * Math.atan(Math.tan(vfov / 2) * camera.aspect);
+    const d = Math.min(6.2, Math.max(3.4, (W / 2 + .35) / Math.tan(hfov / 2)));
+    return new THREE.Vector3(0, EYE, QZ - d);
+  };
   const standPoint = (i) => {
     const { x, z, side } = boothPos[i];
     const nx = -side * Math.sin(Math.PI / 3), nz = Math.cos(Math.PI / 3);
@@ -3199,7 +3436,8 @@ const { payload } = await jwtVerify(token, JWKS, {
   };
   world.go = (i, onArrive) => {
     closeSheet(); here = -1; renderChips(-1);
-    const to = standPoint(i), b = boothPos[i];
+    const isQ = i === QUIZ;
+    const to = isQ ? quizStand() : standPoint(i), b = isQ ? { x: 0, z: QZ } : boothPos[i];
     const tgt = new THREE.Vector3(b.x, 1.0, b.z);
     $('hud-hint').textContent = '走過去中……';
     walkTo(to, yawTo(to, tgt), Math.atan2(tgt.y - EYE, Math.hypot(tgt.x - to.x, tgt.z - to.z)), () => {
@@ -3208,9 +3446,10 @@ const { payload } = await jwtVerify(token, JWKS, {
     });
   };
   world.here = () => here;
+  world.afterQuiz = () => { renderChips(here); if (here === QUIZ) openSheet(QUIZ); };
   world.leave = () => {
     if (here < 0) { closeSheet(); return; }
-    const z = boothPos[here].z + 1.2;
+    const z = here === QUIZ ? 5 : boothPos[here].z + 1.2;
     closeSheet(); here = -1; renderChips(-1);
     walkTo(new THREE.Vector3(0, EYE, z), 0, 0, () => { $('hud-hint').textContent = '點攤位就會走過去，拖曳可以轉頭看看'; });
   };
@@ -3224,7 +3463,7 @@ const { payload } = await jwtVerify(token, JWKS, {
     if (!down || walk) return;
     const dx = e.clientX - down.x, dy = e.clientY - down.y;
     if (!down.moved && Math.hypot(dx, dy) > 8) down.moved = true;
-    if (down.moved) { look.yaw = clamp(down.ly + dx * .005, -1.1, 1.1); look.pitch = clamp(down.lp + dy * .004, -.35, .35); }
+    if (down.moved) { look.yaw = down.ly + dx * .005; look.pitch = clamp(down.lp + dy * .004, -.35, .35); }
   });
   stage.addEventListener('pointerup', (e) => {
     if (!down) return;
@@ -3246,7 +3485,7 @@ const { payload } = await jwtVerify(token, JWKS, {
       if (k >= 1) { const d = walk.done; walk = null; cam.pos.y = EYE; d && d(); }
     }
     // 覆蓋層開著時不用重畫 3D，省電
-    if (lessonOv.hidden && stampOv.hidden) {
+    if (lessonOv.hidden && stampOv.hidden && quizOv.hidden) {
       camera.position.copy(cam.pos);
       camera.rotation.set(cam.pitch + look.pitch, cam.yaw + look.yaw, 0);
       renderer.render(scene, camera);
