@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "learn-jwks",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-18",
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": "./web",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+  "vars": {
+    "BASE_PATH": ""
+  },
+
+  "env": {
+    // ───────── 正式環境：unclereal.com/library/jwks（見 docs/adr/0001） ─────────
+    "production": {
+      "name": "learn-jwks",
+      "routes": [
+        { "pattern": "unclereal.com/library/jwks*", "zone_name": "unclereal.com" }
+      ],
+      "vars": {
+        "BASE_PATH": "/library/jwks"
+      }
+    }
+  }
+}
