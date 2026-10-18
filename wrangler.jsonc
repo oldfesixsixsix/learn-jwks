@@ -14,11 +14,19 @@
   },
 
   "env": {
-    // ───────── 正式環境：unclereal.com/library/jwks（見 docs/adr/0001） ─────────
+    // ───────── 正式環境：unclereal.com/library/jwks（見 docs/adr/0001、0002） ─────────
     "production": {
       "name": "learn-jwks",
       "routes": [
         { "pattern": "unclereal.com/library/jwks*", "zone_name": "unclereal.com" }
+      ],
+      // 跟 library 共用同一個 D1 資料庫（book/loan 表），見 library docs/adr/0003
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "library",
+          "database_id": "e062b0e9-2110-4951-8f42-d58d823eba29"
+        }
       ],
       "vars": {
         "BASE_PATH": "/library/jwks"
